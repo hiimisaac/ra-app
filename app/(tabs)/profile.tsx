@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, LogOut, Award, Calendar, Settings, ChevronRight, Plus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import Button from '@/components/ui/Button';
 import ProfileStats from '@/components/ProfileStats';
@@ -12,6 +13,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 import { UserActivityService, UserActivity } from '@/lib/userActivityService';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
@@ -229,6 +231,10 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSettingsNavigation = (screen: string) => {
+    router.push(`/settings/${screen}` as any);
+  };
+
   // Show loading state
   if (loading || loggingOut) {
     console.log('ProfileScreen: Rendering loading state');
@@ -389,7 +395,10 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.settingsContainer}>
-            <TouchableOpacity style={styles.settingsItem}>
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => handleSettingsNavigation('calendar')}
+            >
               <View style={styles.settingsItemContent}>
                 <Calendar size={22} color={Colors.primary} style={styles.settingsIcon} />
                 <Text style={styles.settingsText}>Calendar Integration</Text>
@@ -397,7 +406,10 @@ export default function ProfileScreen() {
               <ChevronRight size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.settingsItem}>
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => handleSettingsNavigation('preferences')}
+            >
               <View style={styles.settingsItemContent}>
                 <Award size={22} color={Colors.primary} style={styles.settingsIcon} />
                 <Text style={styles.settingsText}>Volunteer Preferences</Text>
@@ -405,7 +417,10 @@ export default function ProfileScreen() {
               <ChevronRight size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.settingsItem}>
+            <TouchableOpacity 
+              style={styles.settingsItem}
+              onPress={() => handleSettingsNavigation('account')}
+            >
               <View style={styles.settingsItemContent}>
                 <Settings size={22} color={Colors.primary} style={styles.settingsIcon} />
                 <Text style={styles.settingsText}>Account Settings</Text>
@@ -478,13 +493,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  errorTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
-    color: Colors.textPrimary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
   loginSubtitle: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
@@ -492,6 +500,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
+  },
+  errorTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    color: Colors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   errorMessage: {
     fontFamily: 'Inter-Regular',
