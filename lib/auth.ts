@@ -75,11 +75,13 @@ export class AuthService {
 
   static async signOut() {
     try {
+      console.log('AuthService: Starting signOut...');
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Supabase signOut error:', error);
         throw error;
       }
+      console.log('AuthService: SignOut successful');
       return { error: null };
     } catch (error: any) {
       console.error('SignOut failed:', error);
@@ -179,26 +181,30 @@ export class AuthService {
   static onAuthStateChange(callback: (user: User | null, userProfile: UserProfile | null) => void) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user || null;
-      let userProfile: UserProfile | null = null;
       
       console.log('Auth state change:', event, user ? 'User present' : 'No user');
       
-      // Handle sign out - clear everything immediately
+      // Handle sign out - clear everything immediately and call callback
       if (event === 'SIGNED_OUT' || !user) {
+        console.log('Auth state: User signed out, calling callback with null values');
         callback(null, null);
         return;
       }
       
-      // If user just signed in, ensure they have a profile
-      if (user && event === 'SIGNED_IN') {
+      // For any other event with a user, try to get/create profile
+      let userProfile: UserProfile | null = null;
+      
+      if (event === 'SIGNED_IN') {
+        console.log('Auth state: User signed in, ensuring profile exists');
         const { profile } = await this.ensureUserProfile(user);
         userProfile = profile;
-      } else if (user) {
-        // For other events, try to get existing profile
+      } else {
+        console.log('Auth state: Other event, getting existing profile');
         const { profile } = await this.getUserProfile(user.id);
         userProfile = profile;
       }
       
+      console.log('Auth state: Calling callback with user and profile');
       callback(user, userProfile);
     });
   }

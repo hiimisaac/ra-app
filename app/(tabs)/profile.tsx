@@ -24,7 +24,7 @@ export default function ProfileScreen() {
     
     // Listen for auth state changes
     const { data: { subscription } } = AuthService.onAuthStateChange((user, profile) => {
-      console.log('Auth state changed in profile screen:', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
+      console.log('Profile screen: Auth state changed', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
       
       // Always update states immediately
       setUser(user);
@@ -47,6 +47,7 @@ export default function ProfileScreen() {
   const checkAuthState = async () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
+      console.log('Profile screen: Initial auth check', currentUser ? 'User found' : 'No user');
       setUser(currentUser);
       
       if (currentUser) {
@@ -87,23 +88,24 @@ export default function ProfileScreen() {
           text: "Sign Out", 
           onPress: async () => {
             setLoggingOut(true);
-            console.log('Starting logout process...');
+            console.log('Profile screen: Starting logout process...');
             
             try {
               const { error } = await AuthService.signOut();
               if (error) {
-                console.error('Logout error:', error);
+                console.error('Profile screen: Logout error:', error);
                 Alert.alert('Error', 'Failed to sign out. Please try again.');
                 setLoggingOut(false);
               } else {
-                console.log('Logout successful');
+                console.log('Profile screen: Logout successful, clearing states immediately');
                 // Immediately clear states to ensure UI updates
                 setUser(null);
                 setUserProfile(null);
+                setProfileError(null);
                 setLoggingOut(false);
               }
             } catch (error) {
-              console.error('Logout exception:', error);
+              console.error('Profile screen: Logout exception:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
               setLoggingOut(false);
             }
@@ -151,6 +153,7 @@ export default function ProfileScreen() {
 
   // Show login screen if no user
   if (!user) {
+    console.log('Profile screen: Rendering login screen (no user)');
     return (
       <>
         <SafeAreaView style={styles.container}>
@@ -200,6 +203,7 @@ export default function ProfileScreen() {
 
   // User is logged in but profile failed to load/create
   if (user && !userProfile) {
+    console.log('Profile screen: Rendering error screen (user but no profile)');
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -227,6 +231,7 @@ export default function ProfileScreen() {
   }
 
   // User is logged in and has profile - show full profile screen
+  console.log('Profile screen: Rendering full profile screen');
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
