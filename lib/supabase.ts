@@ -55,3 +55,15 @@ export interface VolunteerOpportunity {
   description: string | null;
   created_at: string | null;
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  volunteer_hours: number;
+  events_attended: number;
+  donations_made: number;
+  created_at: string;
+  updated_at: string;
+}
