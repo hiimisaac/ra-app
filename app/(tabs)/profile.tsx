@@ -23,20 +23,22 @@ export default function ProfileScreen() {
   const isMounted = useRef(true);
 
   useEffect(() => {
+    console.log('ProfileScreen: Component mounted, setting up auth listener');
     isMounted.current = true;
     checkAuthState();
     
     // Listen for auth state changes
     const { data: { subscription } } = AuthService.onAuthStateChange((user, profile) => {
-      console.log('Profile screen: Auth state changed', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
+      console.log('ProfileScreen: Auth state changed -', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
       
       // Only update state if component is still mounted
       if (!isMounted.current) {
-        console.log('Profile screen: Component unmounted, skipping state update');
+        console.log('ProfileScreen: Component unmounted, skipping state update');
         return;
       }
       
       // Always update states immediately
+      console.log('ProfileScreen: Updating states - user:', !!user, 'profile:', !!profile);
       setUser(user);
       setUserProfile(profile);
       setLoading(false);
@@ -52,6 +54,7 @@ export default function ProfileScreen() {
     });
 
     return () => {
+      console.log('ProfileScreen: Component unmounting, cleaning up');
       isMounted.current = false;
       subscription.unsubscribe();
     };
@@ -60,7 +63,7 @@ export default function ProfileScreen() {
   const checkAuthState = async () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
-      console.log('Profile screen: Initial auth check', currentUser ? 'User found' : 'No user');
+      console.log('ProfileScreen: Initial auth check', currentUser ? 'User found' : 'No user');
       
       if (!isMounted.current) return;
       
@@ -99,7 +102,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    console.log('Profile screen: Logout button pressed');
+    console.log('ProfileScreen: Logout button pressed');
     
     Alert.alert(
       "Sign Out",
@@ -108,7 +111,7 @@ export default function ProfileScreen() {
         {
           text: "Cancel",
           style: "cancel",
-          onPress: () => console.log('Profile screen: Logout cancelled')
+          onPress: () => console.log('ProfileScreen: Logout cancelled')
         },
         { 
           text: "Sign Out", 
@@ -120,33 +123,40 @@ export default function ProfileScreen() {
   };
 
   const performLogout = async () => {
-    console.log('Profile screen: Performing logout...');
+    console.log('ProfileScreen: Performing logout...');
     
     if (!isMounted.current) return;
     
     setLoggingOut(true);
     
     try {
+      // Immediately clear states to ensure UI updates quickly
+      console.log('ProfileScreen: Clearing states immediately');
+      setUser(null);
+      setUserProfile(null);
+      setProfileError(null);
+      
       const { error } = await AuthService.signOut();
       
       if (!isMounted.current) return;
       
       if (error) {
-        console.error('Profile screen: Logout error:', error);
+        console.error('ProfileScreen: Logout error:', error);
+        // Restore states if logout failed
+        await checkAuthState();
         Alert.alert('Error', 'Failed to sign out. Please try again.');
-        setLoggingOut(false);
       } else {
-        console.log('Profile screen: Logout successful, clearing states immediately');
-        // Immediately clear states to ensure UI updates
-        setUser(null);
-        setUserProfile(null);
-        setProfileError(null);
-        setLoggingOut(false);
+        console.log('ProfileScreen: Logout successful');
       }
     } catch (error) {
-      console.error('Profile screen: Logout exception:', error);
+      console.error('ProfileScreen: Logout exception:', error);
       if (isMounted.current) {
+        // Restore states if logout failed
+        await checkAuthState();
         Alert.alert('Error', 'Failed to sign out. Please try again.');
+      }
+    } finally {
+      if (isMounted.current) {
         setLoggingOut(false);
       }
     }
@@ -182,6 +192,7 @@ export default function ProfileScreen() {
 
   // Show loading state
   if (loading || loggingOut) {
+    console.log('ProfileScreen: Rendering loading state');
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -196,7 +207,7 @@ export default function ProfileScreen() {
 
   // Show login screen if no user
   if (!user) {
-    console.log('Profile screen: Rendering login screen (no user)');
+    console.log('ProfileScreen: Rendering login screen (no user)');
     return (
       <>
         <SafeAreaView style={styles.container}>
@@ -246,7 +257,7 @@ export default function ProfileScreen() {
 
   // User is logged in but profile failed to load/create
   if (user && !userProfile) {
-    console.log('Profile screen: Rendering error screen (user but no profile)');
+    console.log('ProfileScreen: Rendering error screen (user but no profile)');
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -274,7 +285,7 @@ export default function ProfileScreen() {
   }
 
   // User is logged in and has profile - show full profile screen
-  console.log('Profile screen: Rendering full profile screen');
+  console.log('ProfileScreen: Rendering full profile screen');
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>

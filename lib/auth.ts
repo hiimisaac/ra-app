@@ -77,20 +77,20 @@ export class AuthService {
     try {
       console.log('AuthService: Starting signOut...');
       
-      // Clear the session first
+      // Clear the session
       const { error } = await supabase.auth.signOut({
-        scope: 'local' // Only sign out locally, not from all devices
+        scope: 'local'
       });
       
       if (error) {
-        console.error('Supabase signOut error:', error);
+        console.error('AuthService: Supabase signOut error:', error);
         throw error;
       }
       
       console.log('AuthService: SignOut successful');
       return { error: null };
     } catch (error: any) {
-      console.error('SignOut failed:', error);
+      console.error('AuthService: SignOut failed:', error);
       return { error: error.message };
     }
   }
@@ -188,11 +188,11 @@ export class AuthService {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user || null;
       
-      console.log('Auth state change:', event, user ? 'User present' : 'No user');
+      console.log('AuthService: Auth state change event:', event, user ? 'User present' : 'No user');
       
       // Handle sign out - clear everything immediately and call callback
       if (event === 'SIGNED_OUT' || !user) {
-        console.log('Auth state: User signed out, calling callback with null values');
+        console.log('AuthService: User signed out, calling callback with null values');
         callback(null, null);
         return;
       }
@@ -200,17 +200,21 @@ export class AuthService {
       // For any other event with a user, try to get/create profile
       let userProfile: UserProfile | null = null;
       
-      if (event === 'SIGNED_IN') {
-        console.log('Auth state: User signed in, ensuring profile exists');
-        const { profile } = await this.ensureUserProfile(user);
-        userProfile = profile;
-      } else {
-        console.log('Auth state: Other event, getting existing profile');
-        const { profile } = await this.getUserProfile(user.id);
-        userProfile = profile;
+      try {
+        if (event === 'SIGNED_IN') {
+          console.log('AuthService: User signed in, ensuring profile exists');
+          const { profile } = await this.ensureUserProfile(user);
+          userProfile = profile;
+        } else {
+          console.log('AuthService: Other event, getting existing profile');
+          const { profile } = await this.getUserProfile(user.id);
+          userProfile = profile;
+        }
+      } catch (error) {
+        console.error('AuthService: Error handling profile during auth state change:', error);
       }
       
-      console.log('Auth state: Calling callback with user and profile');
+      console.log('AuthService: Calling callback with user and profile');
       callback(user, userProfile);
     });
   }
