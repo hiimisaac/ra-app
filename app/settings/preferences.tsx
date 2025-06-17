@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Heart, MapPin, Clock, Bell } from 'lucide-react-native';
+import { ArrowLeft, Heart, Clock, Bell, Target, Zap } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import Button from '@/components/ui/Button';
 import FilterChip from '@/components/ui/FilterChip';
@@ -11,24 +11,16 @@ import { AuthService } from '@/lib/auth';
 const VOLUNTEER_CATEGORIES = [
   'Environmental',
   'Education', 
-  'Health',
+  'Health & Wellness',
   'Community Welfare',
   'Animal Welfare',
   'Arts & Culture',
   'Youth Development',
   'Senior Care',
   'Disaster Relief',
-  'Technology'
-];
-
-const LOCATIONS = [
-  'Downtown',
-  'Westside',
-  'Northside', 
-  'Eastside',
-  'Southside',
-  'Suburbs',
-  'Remote/Virtual'
+  'Technology & Digital Literacy',
+  'Food Security',
+  'Housing & Homelessness'
 ];
 
 const TIME_PREFERENCES = [
@@ -38,7 +30,15 @@ const TIME_PREFERENCES = [
   'Weekend Mornings',
   'Weekend Afternoons',
   'Weekend Evenings',
-  'Flexible'
+  'Flexible Schedule'
+];
+
+const COMMITMENT_LEVELS = [
+  'One-time Events',
+  'Weekly Commitment',
+  'Monthly Commitment',
+  'Seasonal Projects',
+  'Long-term Partnerships'
 ];
 
 export default function VolunteerPreferencesScreen() {
@@ -48,12 +48,13 @@ export default function VolunteerPreferencesScreen() {
   
   // Preferences state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
-  const [maxDistance, setMaxDistance] = useState(10);
+  const [selectedCommitments, setSelectedCommitments] = useState<string[]>([]);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(true);
+  const [opportunityAlerts, setOpportunityAlerts] = useState(true);
+  const [reminderNotifications, setReminderNotifications] = useState(true);
 
   useEffect(() => {
     checkAuthState();
@@ -66,11 +67,35 @@ export default function VolunteerPreferencesScreen() {
   };
 
   const loadPreferences = async () => {
-    // In a real app, you'd load these from the database
-    // For now, we'll use some default selections
-    setSelectedCategories(['Environmental', 'Community Welfare']);
-    setSelectedLocations(['Downtown', 'Westside']);
-    setSelectedTimes(['Weekend Mornings', 'Weekday Evenings']);
+    // In a real app, you'd load these from the user's profile or preferences table
+    // For now, we'll start with empty selections to let users choose
+    try {
+      // Simulate loading saved preferences
+      // In production, this would fetch from your database
+      const savedPreferences = {
+        categories: [],
+        timePreferences: [],
+        commitmentLevels: [],
+        notifications: {
+          email: true,
+          push: true,
+          weeklyDigest: true,
+          opportunityAlerts: true,
+          reminders: true
+        }
+      };
+
+      setSelectedCategories(savedPreferences.categories);
+      setSelectedTimes(savedPreferences.timePreferences);
+      setSelectedCommitments(savedPreferences.commitmentLevels);
+      setEmailNotifications(savedPreferences.notifications.email);
+      setPushNotifications(savedPreferences.notifications.push);
+      setWeeklyDigest(savedPreferences.notifications.weeklyDigest);
+      setOpportunityAlerts(savedPreferences.notifications.opportunityAlerts);
+      setReminderNotifications(savedPreferences.notifications.reminders);
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -78,14 +103,6 @@ export default function VolunteerPreferencesScreen() {
       setSelectedCategories(selectedCategories.filter(c => c !== category));
     } else {
       setSelectedCategories([...selectedCategories, category]);
-    }
-  };
-
-  const toggleLocation = (location: string) => {
-    if (selectedLocations.includes(location)) {
-      setSelectedLocations(selectedLocations.filter(l => l !== location));
-    } else {
-      setSelectedLocations([...selectedLocations, location]);
     }
   };
 
@@ -97,38 +114,66 @@ export default function VolunteerPreferencesScreen() {
     }
   };
 
+  const toggleCommitment = (commitment: string) => {
+    if (selectedCommitments.includes(commitment)) {
+      setSelectedCommitments(selectedCommitments.filter(c => c !== commitment));
+    } else {
+      setSelectedCommitments([...selectedCommitments, commitment]);
+    }
+  };
+
   const handleSavePreferences = async () => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Error', 'Please sign in to save your preferences');
+      return;
+    }
 
     setLoading(true);
     try {
-      // In a real app, you'd save these preferences to the database
-      // For now, we'll just show a success message
-      
       const preferences = {
         categories: selectedCategories,
-        locations: selectedLocations,
         timePreferences: selectedTimes,
-        maxDistance,
+        commitmentLevels: selectedCommitments,
         notifications: {
           email: emailNotifications,
           push: pushNotifications,
-          weeklyDigest: weeklyDigest
-        }
+          weeklyDigest: weeklyDigest,
+          opportunityAlerts: opportunityAlerts,
+          reminders: reminderNotifications
+        },
+        updatedAt: new Date().toISOString()
       };
 
       console.log('Saving preferences:', preferences);
       
-      // Simulate API call
+      // In a real app, you'd save these to your database
+      // For now, we'll simulate the API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      Alert.alert('Success', 'Your volunteer preferences have been saved!');
+      Alert.alert(
+        'Success', 
+        'Your volunteer preferences have been saved! We\'ll use these to recommend relevant opportunities.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back()
+          }
+        ]
+      );
     } catch (error) {
       console.error('Error saving preferences:', error);
       Alert.alert('Error', 'Failed to save preferences. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getSelectionSummary = () => {
+    const totalSelections = selectedCategories.length + selectedTimes.length + selectedCommitments.length;
+    if (totalSelections === 0) {
+      return "No preferences selected yet";
+    }
+    return `${totalSelections} preference${totalSelections === 1 ? '' : 's'} selected`;
   };
 
   return (
@@ -141,13 +186,24 @@ export default function VolunteerPreferencesScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.introSection}>
+          <Text style={styles.introTitle}>Personalize Your Experience</Text>
+          <Text style={styles.introDescription}>
+            Help us match you with volunteer opportunities that align with your interests, schedule, and commitment level.
+          </Text>
+          <View style={styles.summaryBadge}>
+            <Target size={16} color={Colors.primary} style={styles.summaryIcon} />
+            <Text style={styles.summaryText}>{getSelectionSummary()}</Text>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Heart size={24} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Interest Areas</Text>
           </View>
           <Text style={styles.sectionDescription}>
-            Select the causes and activities you're most passionate about.
+            Select the causes and activities you're most passionate about. Choose as many as you'd like.
           </Text>
           
           <View style={styles.chipContainer}>
@@ -165,33 +221,11 @@ export default function VolunteerPreferencesScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MapPin size={24} color={Colors.secondary} />
-            <Text style={styles.sectionTitle}>Preferred Locations</Text>
-          </View>
-          <Text style={styles.sectionDescription}>
-            Choose the areas where you'd like to volunteer.
-          </Text>
-          
-          <View style={styles.chipContainer}>
-            {LOCATIONS.map(location => (
-              <FilterChip
-                key={location}
-                label={location}
-                isSelected={selectedLocations.includes(location)}
-                onPress={() => toggleLocation(location)}
-                style={styles.chip}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Clock size={24} color={Colors.highlight} />
+            <Clock size={24} color={Colors.secondary} />
             <Text style={styles.sectionTitle}>Time Availability</Text>
           </View>
           <Text style={styles.sectionDescription}>
-            When are you typically available to volunteer?
+            When are you typically available to volunteer? This helps us suggest opportunities that fit your schedule.
           </Text>
           
           <View style={styles.chipContainer}>
@@ -209,15 +243,37 @@ export default function VolunteerPreferencesScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
+            <Zap size={24} color={Colors.highlight} />
+            <Text style={styles.sectionTitle}>Commitment Level</Text>
+          </View>
+          <Text style={styles.sectionDescription}>
+            What type of volunteer commitment works best for you? Select all that apply.
+          </Text>
+          
+          <View style={styles.chipContainer}>
+            {COMMITMENT_LEVELS.map(commitment => (
+              <FilterChip
+                key={commitment}
+                label={commitment}
+                isSelected={selectedCommitments.includes(commitment)}
+                onPress={() => toggleCommitment(commitment)}
+                style={styles.chip}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <Bell size={24} color={Colors.info} />
-            <Text style={styles.sectionTitle}>Notifications</Text>
+            <Text style={styles.sectionTitle}>Notification Preferences</Text>
           </View>
           
           <View style={styles.settingItem}>
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Email Notifications</Text>
               <Text style={styles.settingDescription}>
-                Get notified about new volunteer opportunities via email
+                Receive volunteer opportunities and updates via email
               </Text>
             </View>
             <Switch
@@ -232,7 +288,7 @@ export default function VolunteerPreferencesScreen() {
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Push Notifications</Text>
               <Text style={styles.settingDescription}>
-                Receive instant notifications on your device
+                Get instant alerts for new opportunities matching your interests
               </Text>
             </View>
             <Switch
@@ -245,9 +301,39 @@ export default function VolunteerPreferencesScreen() {
 
           <View style={styles.settingItem}>
             <View style={styles.settingContent}>
+              <Text style={styles.settingLabel}>Opportunity Alerts</Text>
+              <Text style={styles.settingDescription}>
+                Notify me when new opportunities match my preferences
+              </Text>
+            </View>
+            <Switch
+              value={opportunityAlerts}
+              onValueChange={setOpportunityAlerts}
+              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+              thumbColor={opportunityAlerts ? Colors.primary : Colors.muted}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingContent}>
+              <Text style={styles.settingLabel}>Event Reminders</Text>
+              <Text style={styles.settingDescription}>
+                Remind me about upcoming volunteer sessions and events
+              </Text>
+            </View>
+            <Switch
+              value={reminderNotifications}
+              onValueChange={setReminderNotifications}
+              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+              thumbColor={reminderNotifications ? Colors.primary : Colors.muted}
+            />
+          </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Weekly Digest</Text>
               <Text style={styles.settingDescription}>
-                Get a weekly summary of new opportunities
+                Get a weekly summary of new opportunities and your impact
               </Text>
             </View>
             <Switch
@@ -259,27 +345,38 @@ export default function VolunteerPreferencesScreen() {
           </View>
         </View>
 
-        <View style={styles.summarySection}>
-          <Text style={styles.summaryTitle}>Your Preferences Summary</Text>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Interest Areas:</Text>
-            <Text style={styles.summaryValue}>
-              {selectedCategories.length > 0 ? selectedCategories.join(', ') : 'None selected'}
-            </Text>
+        {(selectedCategories.length > 0 || selectedTimes.length > 0 || selectedCommitments.length > 0) && (
+          <View style={styles.summarySection}>
+            <Text style={styles.summaryTitle}>Your Preferences Summary</Text>
+            
+            {selectedCategories.length > 0 && (
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Interest Areas ({selectedCategories.length}):</Text>
+                <Text style={styles.summaryValue}>
+                  {selectedCategories.join(', ')}
+                </Text>
+              </View>
+            )}
+            
+            {selectedTimes.length > 0 && (
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Time Preferences ({selectedTimes.length}):</Text>
+                <Text style={styles.summaryValue}>
+                  {selectedTimes.join(', ')}
+                </Text>
+              </View>
+            )}
+            
+            {selectedCommitments.length > 0 && (
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Commitment Levels ({selectedCommitments.length}):</Text>
+                <Text style={styles.summaryValue}>
+                  {selectedCommitments.join(', ')}
+                </Text>
+              </View>
+            )}
           </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Locations:</Text>
-            <Text style={styles.summaryValue}>
-              {selectedLocations.length > 0 ? selectedLocations.join(', ') : 'None selected'}
-            </Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Time Preferences:</Text>
-            <Text style={styles.summaryValue}>
-              {selectedTimes.length > 0 ? selectedTimes.join(', ') : 'None selected'}
-            </Text>
-          </View>
-        </View>
+        )}
 
         <Button
           title={loading ? "Saving..." : "Save Preferences"}
@@ -287,6 +384,14 @@ export default function VolunteerPreferencesScreen() {
           disabled={loading || !user}
           style={styles.saveButton}
         />
+
+        {!user && (
+          <View style={styles.signInPrompt}>
+            <Text style={styles.signInText}>
+              Sign in to save your preferences and get personalized volunteer recommendations.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -318,6 +423,44 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  introSection: {
+    backgroundColor: Colors.primaryLight + '15',
+    borderRadius: 12,
+    padding: 20,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: Colors.primary + '20',
+  },
+  introTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    color: Colors.primary,
+    marginBottom: 8,
+  },
+  introDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  summaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  summaryIcon: {
+    marginRight: 6,
+  },
+  summaryText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: Colors.primary,
   },
   section: {
     backgroundColor: Colors.white,
@@ -393,13 +536,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   summaryItem: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   summaryLabel: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
     color: Colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   summaryValue: {
     fontFamily: 'Inter-Regular',
@@ -410,5 +553,20 @@ const styles = StyleSheet.create({
   saveButton: {
     marginVertical: 16,
     marginBottom: 32,
+  },
+  signInPrompt: {
+    backgroundColor: Colors.info + '20',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: Colors.info + '30',
+  },
+  signInText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: Colors.info,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
