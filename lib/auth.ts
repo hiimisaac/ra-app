@@ -76,11 +76,17 @@ export class AuthService {
   static async signOut() {
     try {
       console.log('AuthService: Starting signOut...');
-      const { error } = await supabase.auth.signOut();
+      
+      // Clear the session first
+      const { error } = await supabase.auth.signOut({
+        scope: 'local' // Only sign out locally, not from all devices
+      });
+      
       if (error) {
         console.error('Supabase signOut error:', error);
         throw error;
       }
+      
       console.log('AuthService: SignOut successful');
       return { error: null };
     } catch (error: any) {

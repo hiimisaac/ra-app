@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, LogOut, Award, Calendar, Settings, ChevronRight, Plus } from 'lucide-react-native';
@@ -19,12 +19,22 @@ export default function ProfileScreen() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Use a ref to track if component is mounted to prevent state updates after unmount
+  const isMounted = useRef(true);
+
   useEffect(() => {
+    isMounted.current = true;
     checkAuthState();
     
     // Listen for auth state changes
     const { data: { subscription } } = AuthService.onAuthStateChange((user, profile) => {
       console.log('Profile screen: Auth state changed', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
+      
+      // Only update state if component is still mounted
+      if (!isMounted.current) {
+        console.log('Profile screen: Component unmounted, skipping state update');
+        return;
+      }
       
       // Always update states immediately
       setUser(user);
@@ -41,17 +51,26 @@ export default function ProfileScreen() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAuthState = async () => {
     try {
       const currentUser = await AuthService.getCurrentUser();
       console.log('Profile screen: Initial auth check', currentUser ? 'User found' : 'No user');
+      
+      if (!isMounted.current) return;
+      
       setUser(currentUser);
       
       if (currentUser) {
         const { profile, error } = await AuthService.ensureUserProfile(currentUser);
+        
+        if (!isMounted.current) return;
+        
         setUserProfile(profile);
         
         if (currentUser && !profile) {
@@ -60,9 +79,13 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
-      setProfileError('An error occurred while loading your profile.');
+      if (isMounted.current) {
+        setProfileError('An error occurred while loading your profile.');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -98,10 +121,16 @@ export default function ProfileScreen() {
 
   const performLogout = async () => {
     console.log('Profile screen: Performing logout...');
+    
+    if (!isMounted.current) return;
+    
     setLoggingOut(true);
     
     try {
       const { error } = await AuthService.signOut();
+      
+      if (!isMounted.current) return;
+      
       if (error) {
         console.error('Profile screen: Logout error:', error);
         Alert.alert('Error', 'Failed to sign out. Please try again.');
@@ -116,19 +145,24 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Profile screen: Logout exception:', error);
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
-      setLoggingOut(false);
+      if (isMounted.current) {
+        Alert.alert('Error', 'Failed to sign out. Please try again.');
+        setLoggingOut(false);
+      }
     }
   };
 
   const handleRetryProfile = async () => {
-    if (!user) return;
+    if (!user || !isMounted.current) return;
     
     setLoading(true);
     setProfileError(null);
     
     try {
       const { profile, error } = await AuthService.ensureUserProfile(user);
+      
+      if (!isMounted.current) return;
+      
       setUserProfile(profile);
       
       if (!profile) {
@@ -136,9 +170,13 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error retrying profile creation:', error);
-      setProfileError('An error occurred while creating your profile.');
+      if (isMounted.current) {
+        setProfileError('An error occurred while creating your profile.');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
