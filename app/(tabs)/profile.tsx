@@ -245,13 +245,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity 
-            style={styles.logoutButton} 
-            onPress={handleLogout}
-            disabled={loggingOut}
-          >
-            <LogOut size={20} color={loggingOut ? Colors.muted : Colors.textSecondary} />
-          </TouchableOpacity>
         </View>
 
         <ProfileStats 
@@ -307,6 +300,20 @@ export default function ProfileScreen() {
               <ChevronRight size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Logout Button at Bottom */}
+        <View style={styles.logoutSection}>
+          <TouchableOpacity 
+            style={[styles.logoutBottomButton, loggingOut && styles.logoutBottomButtonDisabled]} 
+            onPress={handleLogout}
+            disabled={loggingOut}
+          >
+            <LogOut size={20} color={Colors.white} style={styles.logoutIcon} />
+            <Text style={styles.logoutBottomButtonText}>
+              {loggingOut ? 'Signing Out...' : 'Sign Out'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -538,5 +545,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: Colors.textPrimary,
+  },
+  logoutSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    paddingBottom: 40,
+  },
+  logoutBottomButton: {
+    backgroundColor: '#E74C3C', // Soft red color
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  logoutBottomButtonDisabled: {
+    backgroundColor: '#BDC3C7', // Muted color when disabled
+    opacity: 0.7,
+  },
+  logoutIcon: {
+    marginRight: 8,
+  },
+  logoutBottomButtonText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: Colors.white,
   },
 });
