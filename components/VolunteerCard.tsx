@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, ScrollView } from 'react-native';
-import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X, UserMinus } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
 import Colors from '@/constants/Colors';
 import { VolunteerOpportunity } from '@/lib/supabase';
 import { AuthService } from '@/lib/auth';
@@ -15,6 +15,42 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  useEffect(() => {
+    checkRegistrationStatus();
+  }, []);
+
+  const checkRegistrationStatus = async () => {
+    try {
+      setCheckingStatus(true);
+      const user = await AuthService.getCurrentUser();
+      
+      if (!user) {
+        setCheckingStatus(false);
+        return;
+      }
+
+      // Check if user is already registered for this opportunity
+      const { data: sessions } = await UserActivityService.getUserVolunteerSessions(user.id, 100);
+      
+      const existingRegistration = sessions.find(session => 
+        session.opportunity_id === opportunity.id && 
+        session.status === 'registered'
+      );
+
+      if (existingRegistration) {
+        setIsSignedUp(true);
+        setRegistrationId(existingRegistration.id);
+        console.log('User is already registered for opportunity:', opportunity.id, 'Registration ID:', existingRegistration.id);
+      }
+    } catch (error) {
+      console.error('Error checking registration status:', error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Date TBD';
@@ -40,10 +76,18 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
 
   const handleSignUp = async () => {
     if (isSignedUp) {
+      // Show un-sign up confirmation
       Alert.alert(
-        'Already Signed Up',
-        'You\'re already registered for this volunteer opportunity. Check your email for details or contact the organizer if you need to make changes.',
-        [{ text: 'OK' }]
+        'Cancel Registration',
+        `Are you sure you want to cancel your registration for "${opportunity.title}"?\n\nThis action cannot be undone and you may need to re-register if you change your mind.`,
+        [
+          { text: 'Keep Registration', style: 'cancel' },
+          { 
+            text: 'Cancel Registration', 
+            style: 'destructive',
+            onPress: handleUnSignUp
+          }
+        ]
       );
       return;
     }
@@ -93,6 +137,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       console.log('Successfully registered for opportunity:', data);
       
       setIsSignedUp(true);
+      setRegistrationId(data.id);
       
       Alert.alert(
         '🎉 Sign Up Successful!',
@@ -116,6 +161,51 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       Alert.alert(
         'Sign Up Failed',
         `There was an error signing up for this opportunity: ${error.message}\n\nPlease try again or contact support if the problem persists.`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnSignUp = async () => {
+    if (!registrationId) {
+      Alert.alert('Error', 'Registration not found. Please try refreshing the page.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      console.log('Cancelling registration:', registrationId);
+
+      // Update the volunteer session status to cancelled
+      const { data, error } = await UserActivityService.updateVolunteerSessionStatus(
+        registrationId, 
+        'cancelled'
+      );
+
+      if (error) {
+        throw new Error(error);
+      }
+
+      console.log('Successfully cancelled registration:', data);
+      
+      setIsSignedUp(false);
+      setRegistrationId(null);
+      
+      Alert.alert(
+        '✅ Registration Cancelled',
+        `Your registration for "${opportunity.title}" has been cancelled.\n\n` +
+        `You can sign up again anytime if you change your mind. The opportunity will remain available until the event date.`,
+        [{ text: 'OK' }]
+      );
+
+    } catch (error: any) {
+      console.error('Error cancelling registration:', error);
+      Alert.alert(
+        'Cancellation Failed',
+        `There was an error cancelling your registration: ${error.message}\n\nPlease try again or contact support if the problem persists.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -209,6 +299,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
             <Text style={styles.modalBulletPoint}>• Click "Sign Up" to register for this opportunity</Text>
             <Text style={styles.modalBulletPoint}>• You'll receive confirmation and details via email</Text>
             <Text style={styles.modalBulletPoint}>• Your volunteer hours will be tracked automatically</Text>
+            <Text style={styles.modalBulletPoint}>• You can cancel your registration anytime before the event</Text>
           </View>
 
           <View style={styles.modalSection}>
@@ -234,7 +325,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
           <TouchableOpacity 
             style={[
               styles.modalSignUpButton,
-              isSignedUp && styles.modalSignedUpButton,
+              isSignedUp && styles.modalCancelButton,
               loading && styles.modalLoadingButton
             ]}
             onPress={() => {
@@ -244,11 +335,13 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
             disabled={loading}
           >
             {loading ? (
-              <Text style={styles.modalSignUpButtonText}>Signing Up...</Text>
+              <Text style={styles.modalSignUpButtonText}>
+                {isSignedUp ? 'Cancelling...' : 'Signing Up...'}
+              </Text>
             ) : isSignedUp ? (
               <>
-                <CheckCircle size={16} color={Colors.white} style={styles.buttonIcon} />
-                <Text style={styles.modalSignUpButtonText}>Already Signed Up</Text>
+                <UserMinus size={16} color={Colors.white} style={styles.buttonIcon} />
+                <Text style={styles.modalSignUpButtonText}>Cancel Registration</Text>
               </>
             ) : (
               <>
@@ -279,7 +372,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
             {isSignedUp && (
               <View style={styles.signedUpBadge}>
                 <CheckCircle size={16} color={Colors.success} />
-                <Text style={styles.signedUpText}>Signed Up</Text>
+                <Text style={styles.signedUpText}>Registered</Text>
               </View>
             )}
           </View>
@@ -334,22 +427,27 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
             <TouchableOpacity 
               style={[
                 styles.signUpButton, 
-                isSignedUp && styles.signedUpButton,
-                loading && styles.loadingButton
+                isSignedUp && styles.cancelButton,
+                loading && styles.loadingButton,
+                checkingStatus && styles.loadingButton
               ]}
               onPress={(e) => {
                 e.stopPropagation(); // Prevent card press
                 handleSignUp();
               }}
-              disabled={loading}
+              disabled={loading || checkingStatus}
               activeOpacity={0.8}
             >
               {loading ? (
-                <Text style={styles.signUpButtonText}>Signing Up...</Text>
+                <Text style={styles.signUpButtonText}>
+                  {isSignedUp ? 'Cancelling...' : 'Signing Up...'}
+                </Text>
+              ) : checkingStatus ? (
+                <Text style={styles.signUpButtonText}>Checking...</Text>
               ) : isSignedUp ? (
                 <>
-                  <CheckCircle size={16} color={Colors.white} style={styles.buttonIcon} />
-                  <Text style={styles.signUpButtonText}>Signed Up</Text>
+                  <UserMinus size={16} color={Colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.signUpButtonText}>Cancel</Text>
                 </>
               ) : (
                 <>
@@ -501,8 +599,8 @@ const styles = StyleSheet.create({
     elevation: 1,
     minHeight: 44,
   },
-  signedUpButton: {
-    backgroundColor: Colors.success,
+  cancelButton: {
+    backgroundColor: Colors.warning,
   },
   loadingButton: {
     backgroundColor: Colors.muted,
@@ -676,8 +774,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
   },
-  modalSignedUpButton: {
-    backgroundColor: Colors.success,
+  modalCancelButton: {
+    backgroundColor: Colors.warning,
   },
   modalLoadingButton: {
     backgroundColor: Colors.muted,

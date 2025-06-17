@@ -67,6 +67,33 @@ export class UserActivityService {
     }
   }
 
+  static async updateVolunteerSessionStatus(sessionId: string, status: VolunteerSession['status']) {
+    try {
+      console.log('Updating volunteer session status:', sessionId, 'to', status);
+      
+      const { data, error } = await supabase
+        .from('user_volunteer_sessions')
+        .update({ 
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error updating session status:', error);
+        throw error;
+      }
+
+      console.log('Session status updated successfully:', data);
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('Error updating volunteer session status:', error);
+      return { data: null, error: error.message };
+    }
+  }
+
   static async getUserVolunteerSessions(userId: string, limit: number = 50) {
     try {
       console.log('Fetching volunteer sessions for user:', userId);

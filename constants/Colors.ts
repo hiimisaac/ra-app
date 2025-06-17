@@ -20,7 +20,7 @@ const Colors = {
   
   // Feedback colors
   success: '#61A854',
-  warning: '#F9C74F',
+  warning: '#F39C12',
   error: '#E63946',
   info: '#4D96FF',
   
