@@ -1,23 +1,32 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Share, Clock } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
-import { NewsItemType } from '@/types';
+import { NewsItem as NewsItemType } from '@/lib/supabase';
 
 interface NewsItemProps {
   item: NewsItemType;
 }
 
 export default function NewsItem({ item }: NewsItemProps) {
+  const router = useRouter();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const handlePress = () => {
+    router.push(`/(tabs)/news/${item.id}`);
+  };
+
   return (
-    <TouchableOpacity style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={handlePress}>
       <View style={styles.content}>
         <View style={styles.imageContainer}>
-          <Image source={{ uri: item.imageUrl }} style={styles.image} />
+          {item.image_url && (
+            <Image source={{ uri: item.image_url }} style={styles.image} />
+          )}
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
@@ -25,7 +34,7 @@ export default function NewsItem({ item }: NewsItemProps) {
           <View style={styles.footer}>
             <View style={styles.dateContainer}>
               <Clock size={14} color={Colors.textSecondary} style={styles.dateIcon} />
-              <Text style={styles.date}>{formatDate(item.date)}</Text>
+              <Text style={styles.date}>{formatDate(item.published_at)}</Text>
             </View>
             <TouchableOpacity style={styles.shareButton}>
               <Share size={16} color={Colors.primary} />

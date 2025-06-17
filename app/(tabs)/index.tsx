@@ -1,18 +1,60 @@
-import { useState, useRef } from 'react';
-import { ScrollView, View, Text, StyleSheet, Image, TouchableOpacity, Animated } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, Image, TouchableOpacity, Animated, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Share } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import Header from '@/components/Header';
 import NewsItem from '@/components/NewsItem';
 import ImpactStory from '@/components/ImpactStory';
-import { newsItems, impactStories } from '@/data/mockData';
+import { ContentService } from '@/services/contentService';
+import { NewsItem as NewsItemType, ImpactStory as ImpactStoryType } from '@/lib/supabase';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const [featuredStoryIndex, setFeaturedStoryIndex] = useState(0);
+  const router = useRouter();
   const scrollX = useRef(new Animated.Value(0)).current;
   
+  const [newsItems, setNewsItems] = useState<NewsItemType[]>([]);
+  const [impactStories, setImpactStories] = useState<ImpactStoryType[]>([]);
+  const [featuredStories, setFeaturedStories] = useState<ImpactStoryType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadContent();
+  }, []);
+
+  const loadContent = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [newsData, storiesData, featuredData] = await Promise.all([
+        ContentService.getNewsItems(5),
+        ContentService.getImpactStories(10),
+        ContentService.getFeaturedStories()
+      ]);
+      
+      setNewsItems(newsData);
+      setImpactStories(storiesData.filter(story => !story.is_featured));
+      setFeaturedStories(featuredData);
+    } catch (err) {
+      console.error('Error loading content:', err);
+      setError('Failed to load content');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFeaturedStoryPress = (story: ImpactStoryType) => {
+    router.push(`/(tabs)/story/${story.id}`);
+  };
+  
   const renderFeaturedStories = () => {
+    if (featuredStories.length === 0) return null;
+
     return (
       <View style={styles.carouselContainer}>
         <Animated.ScrollView
@@ -25,57 +67,94 @@ export default function HomeScreen() {
           )}
           scrollEventThrottle={16}
         >
-          {impactStories.filter(story => story.featured).map((story, index) => (
-            <View key={story.id} style={styles.featuredStoryContainer}>
-              <Image source={{ uri: story.imageUrl }} style={styles.featuredImage} />
+          {featuredStories.map((story, index) => (
+            <TouchableOpacity 
+              key={story.id} 
+              style={[styles.featuredStoryContainer, { width: screenWidth }]}
+              onPress={() => handleFeaturedStoryPress(story)}
+            >
+              {story.image_url && (
+                <Image source={{ uri: story.image_url }} style={styles.featuredImage} />
+              )}
               <View style={styles.featuredOverlay}>
                 <Text style={styles.featuredLabel}>Featured Story</Text>
                 <Text style={styles.featuredTitle}>{story.title}</Text>
-                <TouchableOpacity style={styles.readMoreButton}>
+                <TouchableOpacity 
+                  style={styles.readMoreButton}
+                  onPress={() => handleFeaturedStoryPress(story)}
+                >
                   <Text style={styles.readMoreText}>Read More</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </Animated.ScrollView>
         
-        <View style={styles.dotsContainer}>
-          {impactStories.filter(story => story.featured).map((_, index) => {
-            const inputRange = [
-              (index - 1) * styles.featuredStoryContainer.width,
-              index * styles.featuredStoryContainer.width,
-              (index + 1) * styles.featuredStoryContainer.width,
-            ];
-            
-            const dotOpacity = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.3, 1, 0.3],
-              extrapolate: 'clamp',
-            });
-            
-            const dotWidth = scrollX.interpolate({
-              inputRange,
-              outputRange: [8, 16, 8],
-              extrapolate: 'clamp',
-            });
-            
-            return (
-              <Animated.View
-                key={index}
-                style={[
-                  styles.dot,
-                  {
-                    opacity: dotOpacity,
-                    width: dotWidth,
-                  },
-                ]}
-              />
-            );
-          })}
-        </View>
+        {featuredStories.length > 1 && (
+          <View style={styles.dotsContainer}>
+            {featuredStories.map((_, index) => {
+              const inputRange = [
+                (index - 1) * screenWidth,
+                index * screenWidth,
+                (index + 1) * screenWidth,
+              ];
+              
+              const dotOpacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.3, 1, 0.3],
+                extrapolate: 'clamp',
+              });
+              
+              const dotWidth = scrollX.interpolate({
+                inputRange,
+                outputRange: [8, 16, 8],
+                extrapolate: 'clamp',
+              });
+              
+              return (
+                <Animated.View
+                  key={index}
+                  style={[
+                    styles.dot,
+                    {
+                      opacity: dotOpacity,
+                      width: dotWidth,
+                    },
+                  ]}
+                />
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Impact Stories" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading content...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Impact Stories" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadContent}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,27 +162,33 @@ export default function HomeScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {renderFeaturedStories()}
         
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Latest News</Text>
-        </View>
+        {newsItems.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Latest News</Text>
+            </View>
+            
+            <View style={styles.newsContainer}>
+              {newsItems.map(item => (
+                <NewsItem key={item.id} item={item} />
+              ))}
+            </View>
+          </>
+        )}
         
-        <View style={styles.newsContainer}>
-          {newsItems.map(item => (
-            <NewsItem key={item.id} item={item} />
-          ))}
-        </View>
-        
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Impact Stories</Text>
-        </View>
-        
-        <View style={styles.storiesContainer}>
-          {impactStories
-            .filter(story => !story.featured)
-            .map(story => (
-              <ImpactStory key={story.id} story={story} />
-            ))}
-        </View>
+        {impactStories.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Impact Stories</Text>
+            </View>
+            
+            <View style={styles.storiesContainer}>
+              {impactStories.map(story => (
+                <ImpactStory key={story.id} story={story} />
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -122,7 +207,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   featuredStoryContainer: {
-    width: 400, // This will be adjusted to screen width in practice
     height: 360,
     position: 'relative',
   },
@@ -198,5 +282,40 @@ const styles = StyleSheet.create({
   storiesContainer: {
     marginBottom: 40,
     paddingHorizontal: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 12,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.white,
   },
 });

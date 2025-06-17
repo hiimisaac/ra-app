@@ -1,22 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Share } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
-import { ImpactStoryType } from '@/types';
+import { ImpactStory as ImpactStoryType } from '@/lib/supabase';
 
 interface ImpactStoryProps {
   story: ImpactStoryType;
 }
 
 export default function ImpactStory({ story }: ImpactStoryProps) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    router.push(`/(tabs)/story/${story.id}`);
+  };
+
+  const handleReadMore = () => {
+    router.push(`/(tabs)/story/${story.id}`);
+  };
+
   return (
-    <TouchableOpacity style={styles.container}>
-      <Image source={{ uri: story.imageUrl }} style={styles.image} />
+    <TouchableOpacity style={styles.container} onPress={handlePress}>
+      {story.image_url && (
+        <Image source={{ uri: story.image_url }} style={styles.image} />
+      )}
       <View style={styles.content}>
         <Text style={styles.title}>{story.title}</Text>
         <Text style={styles.excerpt} numberOfLines={3}>{story.excerpt}</Text>
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.readMoreButton}>
+          <TouchableOpacity style={styles.readMoreButton} onPress={handleReadMore}>
             <Text style={styles.readMoreText}>Read More</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.shareButton}>
