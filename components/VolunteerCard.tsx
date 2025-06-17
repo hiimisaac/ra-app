@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
-import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X, UserMinus, AlertTriangle } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X, UserMinus, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import Colors from '@/constants/Colors';
 import { VolunteerOpportunity } from '@/lib/supabase';
