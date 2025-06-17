@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info } from 'lucide-react-native';
 import { useState } from 'react';
 import Colors from '@/constants/Colors';
 import { VolunteerOpportunity } from '@/lib/supabase';
@@ -13,6 +13,7 @@ interface VolunteerCardProps {
 export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Date TBD';
@@ -122,6 +123,9 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
   };
 
   const handleLearnMore = () => {
+    console.log('Learn More button pressed for opportunity:', opportunity.id);
+    
+    // Create a comprehensive details view
     const details = [
       `📋 ${opportunity.title}`,
       '',
@@ -137,9 +141,15 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       '• Meaningful work that makes a difference',
       '• Opportunity to meet like-minded volunteers',
       '• Skills development and community impact',
-      '• Recognition for your volunteer hours'
+      '• Recognition for your volunteer hours',
+      '',
+      '🤝 How to get involved:',
+      '• Click "Sign Up" to register for this opportunity',
+      '• You\'ll receive confirmation and details via email',
+      '• Your volunteer hours will be tracked automatically'
     ].filter(Boolean).join('\n');
 
+    // Show the details in an alert
     Alert.alert(
       'Opportunity Details',
       details,
@@ -151,8 +161,15 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
           style: isSignedUp ? 'default' : 'default'
         }
       ],
-      { cancelable: true }
+      { 
+        cancelable: true,
+        userInterfaceStyle: 'light' // Ensure alert is visible
+      }
     );
+  };
+
+  const toggleDetails = () => {
+    setShowDetails(!showDetails);
   };
 
   return (
@@ -203,9 +220,22 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
         
         {opportunity.description && (
           <View style={styles.description}>
-            <Text style={styles.descriptionText} numberOfLines={3}>
+            <Text style={styles.descriptionText} numberOfLines={showDetails ? undefined : 3}>
               {opportunity.description}
             </Text>
+            {opportunity.description.length > 150 && (
+              <TouchableOpacity 
+                style={styles.expandButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  toggleDetails();
+                }}
+              >
+                <Text style={styles.expandText}>
+                  {showDetails ? 'Show Less' : 'Show More'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
         
@@ -242,10 +272,12 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
             style={styles.learnMoreButton}
             onPress={(e) => {
               e.stopPropagation(); // Prevent card press
+              console.log('Learn More button clicked directly');
               handleLearnMore();
             }}
             activeOpacity={0.8}
           >
+            <Info size={16} color={Colors.primary} style={styles.buttonIcon} />
             <Text style={styles.learnMoreButtonText}>Learn More</Text>
           </TouchableOpacity>
         </View>
@@ -345,6 +377,15 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 20,
   },
+  expandButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  expandText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: Colors.primary,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -390,6 +431,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
     minHeight: 44,
   },
   learnMoreButtonText: {
