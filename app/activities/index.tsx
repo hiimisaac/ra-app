@@ -30,6 +30,7 @@ export default function AllActivitiesScreen() {
   const [hasMoreData, setHasMoreData] = useState(true);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     checkAuthState();
@@ -42,21 +43,29 @@ export default function AllActivitiesScreen() {
   const checkAuthState = async () => {
     try {
       console.log('Checking auth state...');
+      setLoading(true);
+      setError(null);
+      
+      // Wait a bit for auth to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const currentUser = await AuthService.getCurrentUser();
-      console.log('Current user:', currentUser ? 'Found' : 'Not found');
+      console.log('Current user:', currentUser ? `Found (${currentUser.id})` : 'Not found');
       
       setUser(currentUser);
+      setAuthChecked(true);
       
       if (currentUser) {
         console.log('User found, loading activities for:', currentUser.id);
         await loadActivities(true);
       } else {
-        console.log('No user found');
+        console.log('No user found - user needs to sign in');
         setLoading(false);
         setError('Please sign in to view your activities');
       }
     } catch (err) {
       console.error('Error checking auth state:', err);
+      setAuthChecked(true);
       setLoading(false);
       setError('Failed to check authentication status');
     }
@@ -65,10 +74,12 @@ export default function AllActivitiesScreen() {
   const loadActivities = async (isInitial = false) => {
     if (!user) {
       console.log('No user available for loading activities');
+      setError('User not authenticated');
+      setLoading(false);
       return;
     }
 
-    console.log('Loading activities, isInitial:', isInitial);
+    console.log('Loading activities, isInitial:', isInitial, 'userId:', user.id);
 
     if (isInitial) {
       setLoading(true);
@@ -254,7 +265,26 @@ export default function AllActivitiesScreen() {
     </View>
   );
 
-  if (loading) {
+  const renderSignInPrompt = () => (
+    <View style={styles.signInContainer}>
+      <View style={styles.signInIconContainer}>
+        <Calendar size={64} color={Colors.primary} />
+      </View>
+      <Text style={styles.signInTitle}>Sign In Required</Text>
+      <Text style={styles.signInDescription}>
+        Please sign in to view your volunteer activities and track your impact.
+      </Text>
+      <TouchableOpacity 
+        style={styles.signInButton}
+        onPress={() => router.push('/(tabs)/profile')}
+      >
+        <Text style={styles.signInButtonText}>Go to Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Show loading while checking auth
+  if (loading && !authChecked) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -272,7 +302,23 @@ export default function AllActivitiesScreen() {
     );
   }
 
-  if (error) {
+  // Show sign in prompt if no user
+  if (!user && authChecked) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>All Activities</Text>
+        </View>
+        {renderSignInPrompt()}
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error && authChecked) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -283,7 +329,7 @@ export default function AllActivitiesScreen() {
         </View>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => loadActivities(true)}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => checkAuthState()}>
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -434,6 +480,44 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 4,
     opacity: 0.7,
+  },
+  signInContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  signInIconContainer: {
+    backgroundColor: Colors.primaryLight + '20',
+    padding: 24,
+    borderRadius: 50,
+    marginBottom: 24,
+  },
+  signInTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    color: Colors.textPrimary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  signInDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  signInButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 8,
+  },
+  signInButtonText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: Colors.white,
   },
   errorContainer: {
     flex: 1,
