@@ -28,12 +28,12 @@ export class PreferencesService {
   static async testConnection() {
     try {
       console.log('Testing Supabase connection...');
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('user_volunteer_preferences')
-        .select('count(*)')
+        .select('*', { count: 'exact', head: true })
         .limit(1);
       
-      console.log('Connection test result:', { data, error });
+      console.log('Connection test result:', { data, error, count });
       return { connected: !error, error };
     } catch (error: any) {
       console.error('Connection test failed:', error);
