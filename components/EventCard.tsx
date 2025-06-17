@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ScrollView, Alert } from 'react-native';
-import { MapPin, Calendar, Clock, Users, Heart, UserMinus, X, Download, CheckCircle, Info } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, Users, Heart, UserMinus, X, Download, CircleCheck as CheckCircle, Info } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import Colors from '@/constants/Colors';
 import { Event } from '@/lib/supabase';
