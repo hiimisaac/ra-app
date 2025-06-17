@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Heart, Clock, Bell, Target, Zap, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Heart, Clock, Bell, Target, Zap, CircleCheck as CheckCircle } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import Button from '@/components/ui/Button';
 import FilterChip from '@/components/ui/FilterChip';
