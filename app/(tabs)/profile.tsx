@@ -103,23 +103,7 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     console.log('ProfileScreen: Logout button pressed');
-    
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-          onPress: () => console.log('ProfileScreen: Logout cancelled')
-        },
-        { 
-          text: "Sign Out", 
-          onPress: performLogout,
-          style: "destructive"
-        }
-      ]
-    );
+    performLogout(); 
   };
 
   const performLogout = async () => {
