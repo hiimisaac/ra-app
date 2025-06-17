@@ -13,11 +13,11 @@ export default function ImpactStory({ story }: ImpactStoryProps) {
   const router = useRouter();
 
   const handlePress = () => {
-    router.push(`/(tabs)/story/${story.id}`);
+    router.push(`/story/${story.id}`);
   };
 
   const handleReadMore = () => {
-    router.push(`/(tabs)/story/${story.id}`);
+    router.push(`/story/${story.id}`);
   };
 
   return (

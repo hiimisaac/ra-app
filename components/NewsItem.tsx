@@ -17,7 +17,7 @@ export default function NewsItem({ item }: NewsItemProps) {
   };
 
   const handlePress = () => {
-    router.push(`/(tabs)/news/${item.id}`);
+    router.push(`/news/${item.id}`);
   };
 
   return (

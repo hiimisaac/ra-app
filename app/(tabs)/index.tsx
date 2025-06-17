@@ -66,7 +66,7 @@ export default function HomeScreen() {
 
   const handleFeaturedStoryPress = (story: ImpactStoryType) => {
     if (mounted) {
-      router.push(`/(tabs)/story/${story.id}`);
+      router.push(`/story/${story.id}`);
     }
   };
   
