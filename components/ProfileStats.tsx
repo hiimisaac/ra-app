@@ -1,50 +1,59 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { Clock, Calendar, Gift } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Clock, Calendar, Gift, RefreshCw } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 
 interface ProfileStatsProps {
   volunteerHours: number;
   eventsAttended: number;
   donations: number;
+  onRefresh?: () => void;
 }
 
-export default function ProfileStats({ volunteerHours, eventsAttended, donations }: ProfileStatsProps) {
+export default function ProfileStats({ volunteerHours, eventsAttended, donations, onRefresh }: ProfileStatsProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.stat}>
-        <View style={styles.iconContainer}>
-          <Clock size={24} color={Colors.white} />
+      <View style={styles.statsRow}>
+        <View style={styles.stat}>
+          <View style={styles.iconContainer}>
+            <Clock size={24} color={Colors.white} />
+          </View>
+          <Text style={styles.value}>{volunteerHours}</Text>
+          <Text style={styles.label}>Volunteer Hours</Text>
         </View>
-        <Text style={styles.value}>{volunteerHours}</Text>
-        <Text style={styles.label}>Volunteer Hours</Text>
+        
+        <View style={styles.divider} />
+        
+        <View style={styles.stat}>
+          <View style={[styles.iconContainer, styles.eventsIcon]}>
+            <Calendar size={24} color={Colors.white} />
+          </View>
+          <Text style={styles.value}>{eventsAttended}</Text>
+          <Text style={styles.label}>Events Attended</Text>
+        </View>
+        
+        <View style={styles.divider} />
+        
+        <View style={styles.stat}>
+          <View style={[styles.iconContainer, styles.donationsIcon]}>
+            <Gift size={24} color={Colors.white} />
+          </View>
+          <Text style={styles.value}>{donations}</Text>
+          <Text style={styles.label}>Donations Made</Text>
+        </View>
       </View>
       
-      <View style={styles.divider} />
-      
-      <View style={styles.stat}>
-        <View style={[styles.iconContainer, styles.eventsIcon]}>
-          <Calendar size={24} color={Colors.white} />
-        </View>
-        <Text style={styles.value}>{eventsAttended}</Text>
-        <Text style={styles.label}>Events Attended</Text>
-      </View>
-      
-      <View style={styles.divider} />
-      
-      <View style={styles.stat}>
-        <View style={[styles.iconContainer, styles.donationsIcon]}>
-          <Gift size={24} color={Colors.white} />
-        </View>
-        <Text style={styles.value}>{donations}</Text>
-        <Text style={styles.label}>Donations Made</Text>
-      </View>
+      {onRefresh && (
+        <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+          <RefreshCw size={16} color={Colors.primary} style={styles.refreshIcon} />
+          <Text style={styles.refreshText}>Refresh Stats</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     backgroundColor: Colors.white,
     borderRadius: 12,
     paddingVertical: 20,
@@ -56,6 +65,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
   },
   stat: {
     flex: 1,
@@ -92,5 +105,24 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: Colors.border,
     marginHorizontal: 8,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.primaryLight + '20',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+  },
+  refreshIcon: {
+    marginRight: 6,
+  },
+  refreshText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: Colors.primary,
   },
 });

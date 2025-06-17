@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { Clock, Calendar, Award, MapPin } from 'lucide-react-native';
+import { Clock, Calendar, Award, MapPin, DollarSign } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
-import { UserActivityType } from '@/types';
+import { UserActivity } from '@/lib/userActivityService';
 
 interface UserActivityItemProps {
-  activity: UserActivityType;
+  activity: UserActivity;
 }
 
 export default function UserActivityItem({ activity }: UserActivityItemProps) {
@@ -24,7 +24,7 @@ export default function UserActivityItem({ activity }: UserActivityItemProps) {
       case 'event':
         return <Calendar size={20} color={Colors.white} />;
       case 'donation':
-        return <Award size={20} color={Colors.white} />;
+        return <DollarSign size={20} color={Colors.white} />;
       default:
         return <Clock size={20} color={Colors.white} />;
     }
@@ -50,10 +50,29 @@ export default function UserActivityItem({ activity }: UserActivityItemProps) {
       case 'event':
         return `Attended: ${activity.title}`;
       case 'donation':
-        return `Donated: ${activity.title}`;
+        return activity.amount ? `Donated $${activity.amount}` : `Donation: ${activity.title}`;
       default:
         return activity.title;
     }
+  };
+
+  const getStatusBadge = () => {
+    const statusColors = {
+      completed: Colors.success,
+      attended: Colors.success,
+      registered: Colors.info,
+      pending: Colors.warning,
+      cancelled: Colors.error,
+      no_show: Colors.error,
+    };
+
+    const statusColor = statusColors[activity.status as keyof typeof statusColors] || Colors.muted;
+
+    return (
+      <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+        <Text style={styles.statusText}>{activity.status.replace('_', ' ')}</Text>
+      </View>
+    );
   };
 
   return (
@@ -62,7 +81,10 @@ export default function UserActivityItem({ activity }: UserActivityItemProps) {
         {getActivityIcon()}
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>{getActivityTitle()}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{getActivityTitle()}</Text>
+          {getStatusBadge()}
+        </View>
         <Text style={styles.date}>{formatDate(activity.date)}</Text>
         
         {activity.location && (
@@ -101,11 +123,30 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
   title: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: Colors.textPrimary,
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 10,
+    color: Colors.white,
+    textTransform: 'capitalize',
   },
   date: {
     fontFamily: 'Inter-Regular',
@@ -132,6 +173,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
+    marginTop: 4,
   },
   hours: {
     fontFamily: 'Inter-Medium',

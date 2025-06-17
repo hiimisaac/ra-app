@@ -9,12 +9,14 @@ import UserActivityItem from '@/components/UserActivityItem';
 import AuthModal from '@/components/auth/AuthModal';
 import { AuthService, UserProfile } from '@/lib/auth';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { userActivities } from '@/data/mockData';
+import { UserActivityService, UserActivity } from '@/lib/userActivityService';
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userActivities, setUserActivities] = useState<UserActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -51,6 +53,13 @@ export default function ProfileScreen() {
       if (user && !profile) {
         setProfileError('Unable to load or create user profile. Please try signing out and back in.');
       }
+
+      // Load user activities if we have a user and profile
+      if (user && profile) {
+        loadUserActivities(user.id);
+      } else {
+        setUserActivities([]);
+      }
     });
 
     return () => {
@@ -78,6 +87,9 @@ export default function ProfileScreen() {
         
         if (currentUser && !profile) {
           setProfileError(error || 'Unable to load or create user profile. Please try signing out and back in.');
+        } else if (profile) {
+          // Load user activities
+          loadUserActivities(currentUser.id);
         }
       }
     } catch (error) {
@@ -88,6 +100,30 @@ export default function ProfileScreen() {
     } finally {
       if (isMounted.current) {
         setLoading(false);
+      }
+    }
+  };
+
+  const loadUserActivities = async (userId: string) => {
+    if (!isMounted.current) return;
+    
+    setActivitiesLoading(true);
+    
+    try {
+      const { data, error } = await UserActivityService.getUserActivities(userId, 5);
+      
+      if (!isMounted.current) return;
+      
+      if (error) {
+        console.error('Error loading user activities:', error);
+      } else {
+        setUserActivities(data);
+      }
+    } catch (error) {
+      console.error('Error loading user activities:', error);
+    } finally {
+      if (isMounted.current) {
+        setActivitiesLoading(false);
       }
     }
   };
@@ -118,6 +154,7 @@ export default function ProfileScreen() {
       console.log('ProfileScreen: Clearing states immediately');
       setUser(null);
       setUserProfile(null);
+      setUserActivities([]);
       setProfileError(null);
       
       const { error } = await AuthService.signOut();
@@ -161,6 +198,9 @@ export default function ProfileScreen() {
       
       if (!profile) {
         setProfileError(error || 'Unable to create user profile. Please contact support.');
+      } else {
+        // Load user activities
+        loadUserActivities(user.id);
       }
     } catch (error) {
       console.error('Error retrying profile creation:', error);
@@ -171,6 +211,21 @@ export default function ProfileScreen() {
       if (isMounted.current) {
         setLoading(false);
       }
+    }
+  };
+
+  const handleRefreshStats = async () => {
+    if (!user || !isMounted.current) return;
+    
+    try {
+      await UserActivityService.refreshUserStats(user.id);
+      // Reload the profile to get updated stats
+      const { profile } = await AuthService.getUserProfile(user.id);
+      if (profile && isMounted.current) {
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
     }
   };
 
@@ -301,13 +356,20 @@ export default function ProfileScreen() {
           volunteerHours={userProfile.volunteer_hours} 
           eventsAttended={userProfile.events_attended}
           donations={userProfile.donations_made}
+          onRefresh={handleRefreshStats}
         />
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            {activitiesLoading && (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            )}
+          </View>
+          
           {userActivities.length > 0 ? (
             <View style={styles.activityContainer}>
-              {userActivities.slice(0, 3).map(activity => (
+              {userActivities.map(activity => (
                 <UserActivityItem key={activity.id} activity={activity} />
               ))}
             </View>
@@ -318,6 +380,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
+          
           <TouchableOpacity style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>View All Activities</Text>
           </TouchableOpacity>
@@ -535,6 +598,13 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontFamily: 'Inter-Bold',
