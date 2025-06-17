@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, ScrollView } from 'react-native';
 import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X } from 'lucide-react-native';
 import { useState } from 'react';
 import Colors from '@/constants/Colors';
@@ -150,7 +150,12 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.modalContent}>
+        <ScrollView 
+          style={styles.modalScrollView}
+          contentContainerStyle={styles.modalScrollContent}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+        >
           <View style={styles.modalSection}>
             <Text style={styles.modalOpportunityTitle}>{opportunity.title}</Text>
             
@@ -205,7 +210,18 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
             <Text style={styles.modalBulletPoint}>• You'll receive confirmation and details via email</Text>
             <Text style={styles.modalBulletPoint}>• Your volunteer hours will be tracked automatically</Text>
           </View>
-        </View>
+
+          <View style={styles.modalSection}>
+            <Text style={styles.modalSectionTitle}>🌟 Why Volunteer?</Text>
+            <Text style={styles.modalBulletPoint}>• Make a tangible difference in your community</Text>
+            <Text style={styles.modalBulletPoint}>• Build new skills and gain valuable experience</Text>
+            <Text style={styles.modalBulletPoint}>• Connect with passionate, like-minded people</Text>
+            <Text style={styles.modalBulletPoint}>• Feel good about contributing to positive change</Text>
+          </View>
+
+          {/* Extra padding at bottom to ensure content is not hidden behind footer */}
+          <View style={styles.modalBottomPadding} />
+        </ScrollView>
 
         <View style={styles.modalFooter}>
           <TouchableOpacity 
@@ -531,6 +547,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1,
   },
   modalTitle: {
     fontFamily: 'Inter-Bold',
@@ -540,8 +562,10 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 8,
   },
-  modalContent: {
+  modalScrollView: {
     flex: 1,
+  },
+  modalScrollContent: {
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
@@ -608,6 +632,9 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 8,
   },
+  modalBottomPadding: {
+    height: 40, // Extra space to ensure content is not hidden behind footer
+  },
   modalFooter: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -617,6 +644,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   modalCloseTextButton: {
     backgroundColor: Colors.white,
