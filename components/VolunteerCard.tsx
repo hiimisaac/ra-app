@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { MapPin, Calendar, Clock, Users } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import { VolunteerOpportunity } from '@/lib/supabase';
+import { AuthService } from '@/lib/auth';
+import { UserActivityService } from '@/lib/userActivityService';
 
 interface VolunteerCardProps {
   opportunity: VolunteerOpportunity;
@@ -19,8 +21,86 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
     });
   };
 
+  const handleSignUp = async () => {
+    try {
+      // Check if user is authenticated
+      const user = await AuthService.getCurrentUser();
+      
+      if (!user) {
+        Alert.alert(
+          'Sign In Required',
+          'Please sign in to sign up for volunteer opportunities.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign In', onPress: () => {
+              // Navigate to profile tab where they can sign in
+              // This would need router navigation in a real implementation
+              console.log('Navigate to sign in');
+            }}
+          ]
+        );
+        return;
+      }
+
+      // Create a volunteer session registration
+      const volunteerSession = {
+        user_id: user.id,
+        opportunity_id: opportunity.id,
+        title: opportunity.title,
+        description: opportunity.description || '',
+        hours_worked: 0, // Will be updated when session is completed
+        session_date: opportunity.date || new Date().toISOString(),
+        location: opportunity.location || '',
+        status: 'registered' as const
+      };
+
+      // For now, we'll simulate the sign-up process
+      Alert.alert(
+        'Sign Up Successful!',
+        `You've successfully signed up for "${opportunity.title}". You'll receive a confirmation email with details about the volunteer opportunity.`,
+        [
+          { text: 'OK', onPress: () => {
+            console.log('User signed up for opportunity:', opportunity.id);
+            // In a real app, you would:
+            // 1. Save the registration to the database
+            // 2. Send confirmation email
+            // 3. Update the UI to show "Signed Up" status
+          }}
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error signing up for opportunity:', error);
+      Alert.alert(
+        'Sign Up Failed',
+        'There was an error signing up for this opportunity. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleLearnMore = () => {
+    // Show detailed information about the opportunity
+    const details = [
+      `Title: ${opportunity.title}`,
+      opportunity.location ? `Location: ${opportunity.location}` : '',
+      opportunity.date ? `Date: ${formatDate(opportunity.date)}` : '',
+      opportunity.interest_area ? `Category: ${opportunity.interest_area}` : '',
+      opportunity.description ? `\nDescription:\n${opportunity.description}` : ''
+    ].filter(Boolean).join('\n');
+
+    Alert.alert(
+      'Opportunity Details',
+      details,
+      [
+        { text: 'Close', style: 'cancel' },
+        { text: 'Sign Up', onPress: handleSignUp }
+      ]
+    );
+  };
+
   return (
-    <TouchableOpacity style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={handleLearnMore}>
       <View style={styles.content}>
         {opportunity.interest_area && (
           <View style={styles.categoryContainer}>
@@ -54,11 +134,23 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
         )}
         
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.signUpButton}>
+          <TouchableOpacity 
+            style={styles.signUpButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent card press
+              handleSignUp();
+            }}
+          >
             <Text style={styles.signUpButtonText}>Sign Up</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.learnMoreButton}>
+          <TouchableOpacity 
+            style={styles.learnMoreButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent card press
+              handleLearnMore();
+            }}
+          >
             <Text style={styles.learnMoreButtonText}>Learn More</Text>
           </TouchableOpacity>
         </View>
@@ -133,20 +225,25 @@ const styles = StyleSheet.create({
   signUpButton: {
     backgroundColor: Colors.secondary,
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 24,
     flex: 1,
     marginRight: 8,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   signUpButtonText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter-Bold',
     fontSize: 14,
     color: Colors.white,
   },
   learnMoreButton: {
     backgroundColor: Colors.white,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 10,
@@ -156,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   learnMoreButtonText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter-Bold',
     fontSize: 14,
     color: Colors.primary,
   },
