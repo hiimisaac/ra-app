@@ -35,8 +35,8 @@ export class AuthService {
 
       if (error) throw error;
 
-      // Create user profile
-      if (data.user) {
+      // Only create profile if user is confirmed (not pending email confirmation)
+      if (data.user && data.user.email_confirmed_at) {
         await this.createUserProfile(data.user.id, { email, name });
       }
 
@@ -54,6 +54,18 @@ export class AuthService {
       });
 
       if (error) throw error;
+
+      // Check if user profile exists, create if it doesn't
+      if (data.user) {
+        const { profile } = await this.getUserProfile(data.user.id);
+        if (!profile) {
+          const userName = data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User';
+          await this.createUserProfile(data.user.id, { 
+            email: data.user.email!, 
+            name: userName 
+          });
+        }
+      }
 
       return { user: data.user, error: null };
     } catch (error: any) {
@@ -89,7 +101,10 @@ export class AuthService {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        throw error;
+      }
+      
       return { profile: data, error: null };
     } catch (error: any) {
       return { profile: null, error: error.message };
@@ -98,6 +113,12 @@ export class AuthService {
 
   static async createUserProfile(userId: string, userData: { email: string; name: string }) {
     try {
+      // First check if profile already exists
+      const { profile: existingProfile } = await this.getUserProfile(userId);
+      if (existingProfile) {
+        return { profile: existingProfile, error: null };
+      }
+
       const { data, error } = await supabase
         .from('user_profiles')
         .insert([
@@ -116,6 +137,7 @@ export class AuthService {
       if (error) throw error;
       return { profile: data, error: null };
     } catch (error: any) {
+      console.error('Error creating user profile:', error);
       return { profile: null, error: error.message };
     }
   }
@@ -137,8 +159,22 @@ export class AuthService {
   }
 
   static onAuthStateChange(callback: (user: User | null) => void) {
-    return supabase.auth.onAuthStateChange((event, session) => {
-      callback(session?.user || null);
+    return supabase.auth.onAuthStateChange(async (event, session) => {
+      const user = session?.user || null;
+      
+      // If user just signed in and doesn't have a profile, create one
+      if (user && event === 'SIGNED_IN') {
+        const { profile } = await this.getUserProfile(user.id);
+        if (!profile) {
+          const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+          await this.createUserProfile(user.id, { 
+            email: user.email!, 
+            name: userName 
+          });
+        }
+      }
+      
+      callback(user);
     });
   }
 }
