@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, ScrollView } from 'react-native';
-import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X, UserMinus } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X, UserMinus, AlertTriangle } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import Colors from '@/constants/Colors';
 import { VolunteerOpportunity } from '@/lib/supabase';
@@ -15,6 +15,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
@@ -76,19 +77,8 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
 
   const handleSignUp = async () => {
     if (isSignedUp) {
-      // Show un-sign up confirmation
-      Alert.alert(
-        'Cancel Registration',
-        `Are you sure you want to cancel your registration for "${opportunity.title}"?\n\nThis action cannot be undone and you may need to re-register if you change your mind.`,
-        [
-          { text: 'Keep Registration', style: 'cancel' },
-          { 
-            text: 'Cancel Registration', 
-            style: 'destructive',
-            onPress: handleUnSignUp
-          }
-        ]
-      );
+      // Show cancel confirmation modal instead of alert
+      setShowCancelModal(true);
       return;
     }
 
@@ -99,17 +89,8 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       const user = await AuthService.getCurrentUser();
       
       if (!user) {
-        Alert.alert(
-          'Sign In Required',
-          'Please sign in to sign up for volunteer opportunities. You\'ll be able to track your volunteer hours and receive updates about your activities.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign In', onPress: () => {
-              // In a real app, you'd navigate to the sign-in screen
-              console.log('Navigate to sign in');
-            }}
-          ]
-        );
+        // Show sign in modal instead of alert
+        console.log('User not authenticated, should show sign in modal');
         return;
       }
 
@@ -139,38 +120,20 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       setIsSignedUp(true);
       setRegistrationId(data.id);
       
-      Alert.alert(
-        '🎉 Sign Up Successful!',
-        `You've successfully signed up for "${opportunity.title}"!\n\n` +
-        `📅 ${opportunity.date ? formatDate(opportunity.date) : 'Date TBD'}\n` +
-        `📍 ${opportunity.location || 'Location TBD'}\n\n` +
-        `You'll receive a confirmation email with details about the volunteer opportunity. ` +
-        `This activity will be tracked in your volunteer profile.`,
-        [
-          { 
-            text: 'Great!', 
-            onPress: () => {
-              console.log('User confirmed sign-up for opportunity:', opportunity.id);
-            }
-          }
-        ]
-      );
+      // Show success message in console instead of alert
+      console.log('🎉 Sign Up Successful!', `You've successfully signed up for "${opportunity.title}"!`);
 
     } catch (error: any) {
       console.error('Error signing up for opportunity:', error);
-      Alert.alert(
-        'Sign Up Failed',
-        `There was an error signing up for this opportunity: ${error.message}\n\nPlease try again or contact support if the problem persists.`,
-        [{ text: 'OK' }]
-      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUnSignUp = async () => {
+  const handleConfirmCancel = async () => {
     if (!registrationId) {
-      Alert.alert('Error', 'Registration not found. Please try refreshing the page.');
+      console.error('Registration not found. Please try refreshing the page.');
+      setShowCancelModal(false);
       return;
     }
 
@@ -193,21 +156,13 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       
       setIsSignedUp(false);
       setRegistrationId(null);
+      setShowCancelModal(false);
       
-      Alert.alert(
-        '✅ Registration Cancelled',
-        `Your registration for "${opportunity.title}" has been cancelled.\n\n` +
-        `You can sign up again anytime if you change your mind. The opportunity will remain available until the event date.`,
-        [{ text: 'OK' }]
-      );
+      console.log('✅ Registration Cancelled', `Your registration for "${opportunity.title}" has been cancelled.`);
 
     } catch (error: any) {
       console.error('Error cancelling registration:', error);
-      Alert.alert(
-        'Cancellation Failed',
-        `There was an error cancelling your registration: ${error.message}\n\nPlease try again or contact support if the problem persists.`,
-        [{ text: 'OK' }]
-      );
+      setShowCancelModal(false);
     } finally {
       setLoading(false);
     }
@@ -221,6 +176,53 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
   const toggleDetails = () => {
     setShowDetails(!showDetails);
   };
+
+  const renderCancelConfirmationModal = () => (
+    <Modal
+      visible={showCancelModal}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={() => setShowCancelModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.confirmationModal}>
+          <View style={styles.confirmationHeader}>
+            <View style={styles.warningIconContainer}>
+              <AlertTriangle size={32} color={Colors.warning} />
+            </View>
+            <Text style={styles.confirmationTitle}>Cancel Registration</Text>
+          </View>
+          
+          <Text style={styles.confirmationMessage}>
+            Are you sure you want to cancel your registration for "{opportunity.title}"?
+          </Text>
+          
+          <Text style={styles.confirmationSubtext}>
+            This action cannot be undone and you may need to re-register if you change your mind.
+          </Text>
+          
+          <View style={styles.confirmationButtons}>
+            <TouchableOpacity 
+              style={styles.keepButton}
+              onPress={() => setShowCancelModal(false)}
+            >
+              <Text style={styles.keepButtonText}>Keep Registration</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.cancelConfirmButton, loading && styles.loadingButton]}
+              onPress={handleConfirmCancel}
+              disabled={loading}
+            >
+              <Text style={styles.cancelConfirmButtonText}>
+                {loading ? 'Cancelling...' : 'Cancel Registration'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   const renderDetailsModal = () => (
     <Modal
@@ -474,6 +476,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
       </TouchableOpacity>
 
       {renderDetailsModal()}
+      {renderCancelConfirmationModal()}
     </>
   );
 }
@@ -781,6 +784,92 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.muted,
   },
   modalSignUpButtonText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: Colors.white,
+  },
+  // Cancel confirmation modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  confirmationModal: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  confirmationHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  warningIconContainer: {
+    backgroundColor: Colors.warning + '20',
+    padding: 16,
+    borderRadius: 50,
+    marginBottom: 16,
+  },
+  confirmationTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 20,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  confirmationMessage: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  confirmationSubtext: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  keepButton: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keepButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textPrimary,
+  },
+  cancelConfirmButton: {
+    flex: 1,
+    backgroundColor: Colors.warning,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelConfirmButtonText: {
     fontFamily: 'Inter-Bold',
     fontSize: 16,
     color: Colors.white,
