@@ -76,44 +76,49 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
+    console.log('Profile screen: Logout button pressed');
+    
     Alert.alert(
       "Sign Out",
       "Are you sure you want to sign out?",
       [
         {
           text: "Cancel",
-          style: "cancel"
+          style: "cancel",
+          onPress: () => console.log('Profile screen: Logout cancelled')
         },
         { 
           text: "Sign Out", 
-          onPress: async () => {
-            setLoggingOut(true);
-            console.log('Profile screen: Starting logout process...');
-            
-            try {
-              const { error } = await AuthService.signOut();
-              if (error) {
-                console.error('Profile screen: Logout error:', error);
-                Alert.alert('Error', 'Failed to sign out. Please try again.');
-                setLoggingOut(false);
-              } else {
-                console.log('Profile screen: Logout successful, clearing states immediately');
-                // Immediately clear states to ensure UI updates
-                setUser(null);
-                setUserProfile(null);
-                setProfileError(null);
-                setLoggingOut(false);
-              }
-            } catch (error) {
-              console.error('Profile screen: Logout exception:', error);
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
-              setLoggingOut(false);
-            }
-          },
+          onPress: performLogout,
           style: "destructive"
         }
       ]
     );
+  };
+
+  const performLogout = async () => {
+    console.log('Profile screen: Performing logout...');
+    setLoggingOut(true);
+    
+    try {
+      const { error } = await AuthService.signOut();
+      if (error) {
+        console.error('Profile screen: Logout error:', error);
+        Alert.alert('Error', 'Failed to sign out. Please try again.');
+        setLoggingOut(false);
+      } else {
+        console.log('Profile screen: Logout successful, clearing states immediately');
+        // Immediately clear states to ensure UI updates
+        setUser(null);
+        setUserProfile(null);
+        setProfileError(null);
+        setLoggingOut(false);
+      }
+    } catch (error) {
+      console.error('Profile screen: Logout exception:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      setLoggingOut(false);
+    }
   };
 
   const handleRetryProfile = async () => {
@@ -320,6 +325,7 @@ export default function ProfileScreen() {
             style={[styles.logoutBottomButton, loggingOut && styles.logoutBottomButtonDisabled]} 
             onPress={handleLogout}
             disabled={loggingOut}
+            activeOpacity={0.7}
           >
             <LogOut size={20} color={Colors.white} style={styles.logoutIcon} />
             <Text style={styles.logoutBottomButtonText}>
@@ -573,6 +579,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    minHeight: 56, // Ensure minimum touch target
   },
   logoutBottomButtonDisabled: {
     backgroundColor: '#BDC3C7', // Muted color when disabled
