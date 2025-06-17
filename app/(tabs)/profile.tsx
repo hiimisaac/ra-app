@@ -17,15 +17,19 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     checkAuthState();
     
     // Listen for auth state changes
     const { data: { subscription } } = AuthService.onAuthStateChange((user, profile) => {
+      console.log('Auth state changed in profile screen:', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
+      
       setUser(user);
       setUserProfile(profile);
       setLoading(false);
+      setLoggingOut(false); // Reset logging out state
       
       // Clear any previous profile errors when auth state changes
       setProfileError(null);
@@ -81,9 +85,23 @@ export default function ProfileScreen() {
         { 
           text: "Sign Out", 
           onPress: async () => {
-            const { error } = await AuthService.signOut();
-            if (error) {
+            setLoggingOut(true);
+            console.log('Starting logout process...');
+            
+            try {
+              const { error } = await AuthService.signOut();
+              if (error) {
+                console.error('Logout error:', error);
+                Alert.alert('Error', 'Failed to sign out. Please try again.');
+                setLoggingOut(false);
+              } else {
+                console.log('Logout successful');
+                // Auth state change will handle clearing user/profile state
+              }
+            } catch (error) {
+              console.error('Logout exception:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
+              setLoggingOut(false);
             }
           },
           style: "destructive"
@@ -113,12 +131,14 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading) {
+  if (loading || loggingOut) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={styles.loadingText}>
+            {loggingOut ? 'Signing out...' : 'Loading profile...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -225,8 +245,12 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <LogOut size={20} color={Colors.textSecondary} />
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+            disabled={loggingOut}
+          >
+            <LogOut size={20} color={loggingOut ? Colors.muted : Colors.textSecondary} />
           </TouchableOpacity>
         </View>
 

@@ -76,9 +76,13 @@ export class AuthService {
   static async signOut() {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase signOut error:', error);
+        throw error;
+      }
       return { error: null };
     } catch (error: any) {
+      console.error('SignOut failed:', error);
       return { error: error.message };
     }
   }
@@ -176,6 +180,14 @@ export class AuthService {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user || null;
       let userProfile: UserProfile | null = null;
+      
+      console.log('Auth state change:', event, user ? 'User present' : 'No user');
+      
+      // Handle sign out - clear everything immediately
+      if (event === 'SIGNED_OUT' || !user) {
+        callback(null, null);
+        return;
+      }
       
       // If user just signed in, ensure they have a profile
       if (user && event === 'SIGNED_IN') {
