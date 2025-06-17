@@ -286,237 +286,251 @@ export default function VolunteerPreferencesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {debugMode && (
-          <View style={styles.debugSection}>
-            <Text style={styles.debugTitle}>Debug Information</Text>
-            <Text style={styles.debugText}>User ID: {user?.id || 'Not logged in'}</Text>
-            <Text style={styles.debugText}>User Email: {user?.email || 'N/A'}</Text>
-            <TouchableOpacity style={styles.debugTestButton} onPress={handleDebugDatabase}>
-              <Text style={styles.debugTestText}>Test Database Connection</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.introSection}>
-          <Text style={styles.introTitle}>Personalize Your Experience</Text>
-          <Text style={styles.introDescription}>
-            Help us match you with volunteer opportunities that align with your interests, schedule, and commitment level. Your preferences power our recommendation engine.
-          </Text>
-          <View style={styles.summaryBadge}>
-            <Target size={16} color={Colors.primary} style={styles.summaryIcon} />
-            <Text style={styles.summaryText}>{getSelectionSummary()}</Text>
-          </View>
-        </View>
-
-        {getImpactDescription().length > 0 && (
-          <View style={styles.impactSection}>
-            <View style={styles.impactHeader}>
-              <CheckCircle size={20} color={Colors.success} />
-              <Text style={styles.impactTitle}>How This Helps You</Text>
+      <View style={styles.contentContainer}>
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {debugMode && (
+            <View style={styles.debugSection}>
+              <Text style={styles.debugTitle}>Debug Information</Text>
+              <Text style={styles.debugText}>User ID: {user?.id || 'Not logged in'}</Text>
+              <Text style={styles.debugText}>User Email: {user?.email || 'N/A'}</Text>
+              <TouchableOpacity style={styles.debugTestButton} onPress={handleDebugDatabase}>
+                <Text style={styles.debugTestText}>Test Database Connection</Text>
+              </TouchableOpacity>
             </View>
-            {getImpactDescription().map((impact, index) => (
-              <Text key={index} style={styles.impactItem}>• {impact}</Text>
-            ))}
-          </View>
-        )}
+          )}
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Heart size={24} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Interest Areas</Text>
-          </View>
-          <Text style={styles.sectionDescription}>
-            Select the causes and activities you're most passionate about. We'll prioritize showing you opportunities in these areas.
-          </Text>
-          
-          <View style={styles.chipContainer}>
-            {VOLUNTEER_CATEGORIES.map(category => (
-              <FilterChip
-                key={category}
-                label={category}
-                isSelected={selectedCategories.includes(category)}
-                onPress={() => toggleCategory(category)}
-                style={styles.chip}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Clock size={24} color={Colors.secondary} />
-            <Text style={styles.sectionTitle}>Time Availability</Text>
-          </View>
-          <Text style={styles.sectionDescription}>
-            When are you typically available to volunteer? This helps us suggest opportunities that fit your schedule.
-          </Text>
-          
-          <View style={styles.chipContainer}>
-            {TIME_PREFERENCES.map(time => (
-              <FilterChip
-                key={time}
-                label={time}
-                isSelected={selectedTimes.includes(time)}
-                onPress={() => toggleTime(time)}
-                style={styles.chip}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Zap size={24} color={Colors.highlight} />
-            <Text style={styles.sectionTitle}>Commitment Level</Text>
-          </View>
-          <Text style={styles.sectionDescription}>
-            What type of volunteer commitment works best for you? We'll match you with appropriate opportunities.
-          </Text>
-          
-          <View style={styles.chipContainer}>
-            {COMMITMENT_LEVELS.map(commitment => (
-              <FilterChip
-                key={commitment}
-                label={commitment}
-                isSelected={selectedCommitments.includes(commitment)}
-                onPress={() => toggleCommitment(commitment)}
-                style={styles.chip}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Bell size={24} color={Colors.info} />
-            <Text style={styles.sectionTitle}>Smart Notifications</Text>
-          </View>
-          
-          <View style={styles.settingItem}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Email Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive volunteer opportunities and updates via email
-              </Text>
-            </View>
-            <Switch
-              value={emailNotifications}
-              onValueChange={setEmailNotifications}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={emailNotifications ? Colors.primary : Colors.muted}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Push Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Get instant alerts for new opportunities matching your interests
-              </Text>
-            </View>
-            <Switch
-              value={pushNotifications}
-              onValueChange={setPushNotifications}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={pushNotifications ? Colors.primary : Colors.muted}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Opportunity Alerts</Text>
-              <Text style={styles.settingDescription}>
-                Notify me when new opportunities match my preferences (powered by your selections above)
-              </Text>
-            </View>
-            <Switch
-              value={opportunityAlerts}
-              onValueChange={setOpportunityAlerts}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={opportunityAlerts ? Colors.primary : Colors.muted}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Event Reminders</Text>
-              <Text style={styles.settingDescription}>
-                Remind me about upcoming volunteer sessions and events
-              </Text>
-            </View>
-            <Switch
-              value={reminderNotifications}
-              onValueChange={setReminderNotifications}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={reminderNotifications ? Colors.primary : Colors.muted}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Weekly Digest</Text>
-              <Text style={styles.settingDescription}>
-                Get a weekly summary of new opportunities and your impact
-              </Text>
-            </View>
-            <Switch
-              value={weeklyDigest}
-              onValueChange={setWeeklyDigest}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={weeklyDigest ? Colors.primary : Colors.muted}
-            />
-          </View>
-        </View>
-
-        {(selectedCategories.length > 0 || selectedTimes.length > 0 || selectedCommitments.length > 0) && (
-          <View style={styles.summarySection}>
-            <Text style={styles.summaryTitle}>Your Preferences Summary</Text>
-            
-            {selectedCategories.length > 0 && (
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Interest Areas ({selectedCategories.length}):</Text>
-                <Text style={styles.summaryValue}>
-                  {selectedCategories.join(', ')}
-                </Text>
-              </View>
-            )}
-            
-            {selectedTimes.length > 0 && (
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Time Preferences ({selectedTimes.length}):</Text>
-                <Text style={styles.summaryValue}>
-                  {selectedTimes.join(', ')}
-                </Text>
-              </View>
-            )}
-            
-            {selectedCommitments.length > 0 && (
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Commitment Levels ({selectedCommitments.length}):</Text>
-                <Text style={styles.summaryValue}>
-                  {selectedCommitments.join(', ')}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <Button
-          title={loading ? "Saving..." : hasChanges ? "Save Preferences" : "Preferences Saved"}
-          onPress={handleSavePreferences}
-          disabled={loading || !user || !hasChanges}
-          style={[styles.saveButton, !hasChanges && styles.savedButton]}
-        />
-
-        {!user && (
-          <View style={styles.signInPrompt}>
-            <Text style={styles.signInText}>
-              Sign in to save your preferences and get personalized volunteer recommendations.
+          <View style={styles.introSection}>
+            <Text style={styles.introTitle}>Personalize Your Experience</Text>
+            <Text style={styles.introDescription}>
+              Help us match you with volunteer opportunities that align with your interests, schedule, and commitment level. Your preferences power our recommendation engine.
             </Text>
+            <View style={styles.summaryBadge}>
+              <Target size={16} color={Colors.primary} style={styles.summaryIcon} />
+              <Text style={styles.summaryText}>{getSelectionSummary()}</Text>
+            </View>
+          </View>
+
+          {getImpactDescription().length > 0 && (
+            <View style={styles.impactSection}>
+              <View style={styles.impactHeader}>
+                <CheckCircle size={20} color={Colors.success} />
+                <Text style={styles.impactTitle}>How This Helps You</Text>
+              </View>
+              {getImpactDescription().map((impact, index) => (
+                <Text key={index} style={styles.impactItem}>• {impact}</Text>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Heart size={24} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Interest Areas</Text>
+            </View>
+            <Text style={styles.sectionDescription}>
+              Select the causes and activities you're most passionate about. We'll prioritize showing you opportunities in these areas.
+            </Text>
+            
+            <View style={styles.chipContainer}>
+              {VOLUNTEER_CATEGORIES.map(category => (
+                <FilterChip
+                  key={category}
+                  label={category}
+                  isSelected={selectedCategories.includes(category)}
+                  onPress={() => toggleCategory(category)}
+                  style={styles.chip}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Clock size={24} color={Colors.secondary} />
+              <Text style={styles.sectionTitle}>Time Availability</Text>
+            </View>
+            <Text style={styles.sectionDescription}>
+              When are you typically available to volunteer? This helps us suggest opportunities that fit your schedule.
+            </Text>
+            
+            <View style={styles.chipContainer}>
+              {TIME_PREFERENCES.map(time => (
+                <FilterChip
+                  key={time}
+                  label={time}
+                  isSelected={selectedTimes.includes(time)}
+                  onPress={() => toggleTime(time)}
+                  style={styles.chip}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Zap size={24} color={Colors.highlight} />
+              <Text style={styles.sectionTitle}>Commitment Level</Text>
+            </View>
+            <Text style={styles.sectionDescription}>
+              What type of volunteer commitment works best for you? We'll match you with appropriate opportunities.
+            </Text>
+            
+            <View style={styles.chipContainer}>
+              {COMMITMENT_LEVELS.map(commitment => (
+                <FilterChip
+                  key={commitment}
+                  label={commitment}
+                  isSelected={selectedCommitments.includes(commitment)}
+                  onPress={() => toggleCommitment(commitment)}
+                  style={styles.chip}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Bell size={24} color={Colors.info} />
+              <Text style={styles.sectionTitle}>Smart Notifications</Text>
+            </View>
+            
+            <View style={styles.settingItem}>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Email Notifications</Text>
+                <Text style={styles.settingDescription}>
+                  Receive volunteer opportunities and updates via email
+                </Text>
+              </View>
+              <Switch
+                value={emailNotifications}
+                onValueChange={setEmailNotifications}
+                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                thumbColor={emailNotifications ? Colors.primary : Colors.muted}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Push Notifications</Text>
+                <Text style={styles.settingDescription}>
+                  Get instant alerts for new opportunities matching your interests
+                </Text>
+              </View>
+              <Switch
+                value={pushNotifications}
+                onValueChange={setPushNotifications}
+                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                thumbColor={pushNotifications ? Colors.primary : Colors.muted}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Opportunity Alerts</Text>
+                <Text style={styles.settingDescription}>
+                  Notify me when new opportunities match my preferences (powered by your selections above)
+                </Text>
+              </View>
+              <Switch
+                value={opportunityAlerts}
+                onValueChange={setOpportunityAlerts}
+                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                thumbColor={opportunityAlerts ? Colors.primary : Colors.muted}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Event Reminders</Text>
+                <Text style={styles.settingDescription}>
+                  Remind me about upcoming volunteer sessions and events
+                </Text>
+              </View>
+              <Switch
+                value={reminderNotifications}
+                onValueChange={setReminderNotifications}
+                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                thumbColor={reminderNotifications ? Colors.primary : Colors.muted}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Weekly Digest</Text>
+                <Text style={styles.settingDescription}>
+                  Get a weekly summary of new opportunities and your impact
+                </Text>
+              </View>
+              <Switch
+                value={weeklyDigest}
+                onValueChange={setWeeklyDigest}
+                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                thumbColor={weeklyDigest ? Colors.primary : Colors.muted}
+              />
+            </View>
+          </View>
+
+          {(selectedCategories.length > 0 || selectedTimes.length > 0 || selectedCommitments.length > 0) && (
+            <View style={styles.summarySection}>
+              <Text style={styles.summaryTitle}>Your Preferences Summary</Text>
+              
+              {selectedCategories.length > 0 && (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Interest Areas ({selectedCategories.length}):</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedCategories.join(', ')}
+                  </Text>
+                </View>
+              )}
+              
+              {selectedTimes.length > 0 && (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Time Preferences ({selectedTimes.length}):</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedTimes.join(', ')}
+                  </Text>
+                </View>
+              )}
+              
+              {selectedCommitments.length > 0 && (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Commitment Levels ({selectedCommitments.length}):</Text>
+                  <Text style={styles.summaryValue}>
+                    {selectedCommitments.join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {!user && (
+            <View style={styles.signInPrompt}>
+              <Text style={styles.signInText}>
+                Sign in to save your preferences and get personalized volunteer recommendations.
+              </Text>
+            </View>
+          )}
+
+          {/* Add extra padding at bottom to ensure content is not hidden behind fixed button */}
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+
+        {/* Fixed Save Button - Always visible when there are changes */}
+        {hasChanges && user && (
+          <View style={styles.fixedButtonContainer}>
+            <Button
+              title={loading ? "Saving..." : "Save Preferences"}
+              onPress={handleSavePreferences}
+              disabled={loading}
+              style={styles.fixedSaveButton}
+            />
           </View>
         )}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -548,9 +562,18 @@ const styles = StyleSheet.create({
   debugButton: {
     padding: 8,
   },
+  contentContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 16,
+  },
+  bottomPadding: {
+    height: 100, // Extra space to ensure content is not hidden behind fixed button
   },
   loadingContainer: {
     flex: 1,
@@ -747,13 +770,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 18,
   },
-  saveButton: {
-    marginVertical: 16,
-    marginBottom: 32,
-  },
-  savedButton: {
-    backgroundColor: Colors.success,
-  },
   signInPrompt: {
     backgroundColor: Colors.info + '20',
     borderRadius: 8,
@@ -768,5 +784,25 @@ const styles = StyleSheet.create({
     color: Colors.info,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  fixedButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 32, // Extra padding for safe area
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  fixedSaveButton: {
+    marginVertical: 0,
   },
 });
