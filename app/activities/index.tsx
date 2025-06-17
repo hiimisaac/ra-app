@@ -40,19 +40,35 @@ export default function AllActivitiesScreen() {
   }, [activities, selectedFilter]);
 
   const checkAuthState = async () => {
-    const currentUser = await AuthService.getCurrentUser();
-    setUser(currentUser);
-    
-    if (currentUser) {
-      loadActivities(true);
-    } else {
+    try {
+      console.log('Checking auth state...');
+      const currentUser = await AuthService.getCurrentUser();
+      console.log('Current user:', currentUser ? 'Found' : 'Not found');
+      
+      setUser(currentUser);
+      
+      if (currentUser) {
+        console.log('User found, loading activities for:', currentUser.id);
+        await loadActivities(true);
+      } else {
+        console.log('No user found');
+        setLoading(false);
+        setError('Please sign in to view your activities');
+      }
+    } catch (err) {
+      console.error('Error checking auth state:', err);
       setLoading(false);
-      setError('Please sign in to view your activities');
+      setError('Failed to check authentication status');
     }
   };
 
   const loadActivities = async (isInitial = false) => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user available for loading activities');
+      return;
+    }
+
+    console.log('Loading activities, isInitial:', isInitial);
 
     if (isInitial) {
       setLoading(true);
@@ -66,13 +82,16 @@ export default function AllActivitiesScreen() {
 
     try {
       const currentPage = isInitial ? 1 : page;
-      const limit = ITEMS_PER_PAGE;
+      const limit = ITEMS_PER_PAGE * currentPage; // Load all items up to current page
       
-      // Load all types of activities
+      console.log('Fetching activities with limit:', limit);
+      
       const { data, error: activityError } = await UserActivityService.getUserActivities(
         user.id, 
-        currentPage * limit
+        limit
       );
+
+      console.log('Activities fetched:', data.length, 'Error:', activityError);
 
       if (activityError) {
         throw new Error(activityError);
@@ -80,13 +99,13 @@ export default function AllActivitiesScreen() {
 
       if (isInitial) {
         setActivities(data);
-        setHasMoreData(data.length >= limit);
+        setHasMoreData(data.length >= ITEMS_PER_PAGE);
       } else {
         // For pagination, we need to check if we got new data
         const newActivities = data.slice(activities.length);
         if (newActivities.length > 0) {
           setActivities(prev => [...prev, ...newActivities]);
-          setHasMoreData(newActivities.length >= limit);
+          setHasMoreData(newActivities.length >= ITEMS_PER_PAGE);
         } else {
           setHasMoreData(false);
         }
@@ -106,14 +125,19 @@ export default function AllActivitiesScreen() {
   };
 
   const filterActivities = () => {
+    console.log('Filtering activities, total:', activities.length, 'filter:', selectedFilter);
+    
     if (selectedFilter === 'all') {
       setFilteredActivities(activities);
     } else {
-      setFilteredActivities(activities.filter(activity => activity.type === selectedFilter));
+      const filtered = activities.filter(activity => activity.type === selectedFilter);
+      setFilteredActivities(filtered);
+      console.log('Filtered activities:', filtered.length);
     }
   };
 
   const handleRefresh = useCallback(() => {
+    console.log('Refreshing activities...');
     setRefreshing(true);
     setActivities([]);
     setPage(1);
@@ -122,11 +146,13 @@ export default function AllActivitiesScreen() {
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMoreData && selectedFilter === 'all') {
+      console.log('Loading more activities...');
       loadActivities(false);
     }
   };
 
   const handleFilterChange = (filterKey: string) => {
+    console.log('Changing filter to:', filterKey);
     setSelectedFilter(filterKey);
   };
 
@@ -137,6 +163,7 @@ export default function AllActivitiesScreen() {
       event: activities.filter(a => a.type === 'event').length,
       donation: activities.filter(a => a.type === 'donation').length,
     };
+    console.log('Activity stats:', stats);
     return stats;
   };
 
@@ -239,6 +266,7 @@ export default function AllActivitiesScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading your activities...</Text>
+          <Text style={styles.loadingSubtext}>This may take a moment</Text>
         </View>
       </SafeAreaView>
     );
@@ -392,12 +420,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 32,
   },
   loadingText: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: Colors.textSecondary,
     marginTop: 12,
+  },
+  loadingSubtext: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    opacity: 0.7,
   },
   errorContainer: {
     flex: 1,
