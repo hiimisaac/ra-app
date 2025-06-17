@@ -271,6 +271,10 @@ export default function ProfileScreen() {
     router.push(`/settings/${screen}` as any);
   };
 
+  const handleViewAllActivities = () => {
+    router.push('/activities');
+  };
+
   // Show loading state
   if (loading || loggingOut) {
     console.log('ProfileScreen: Rendering loading state');
@@ -423,8 +427,9 @@ export default function ProfileScreen() {
             </View>
           )}
           
-          <TouchableOpacity style={styles.viewAllButton}>
+          <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllActivities}>
             <Text style={styles.viewAllText}>View All Activities</Text>
+            <ChevronRight size={16} color={Colors.primary} style={styles.viewAllIcon} />
           </TouchableOpacity>
         </View>
         
@@ -677,7 +682,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   viewAllButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     marginTop: 8,
   },
@@ -685,6 +692,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 14,
     color: Colors.primary,
+  },
+  viewAllIcon: {
+    marginLeft: 4,
   },
   settingsContainer: {
     backgroundColor: Colors.white,
