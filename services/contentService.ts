@@ -1,4 +1,4 @@
-import { supabase, NewsItem, ImpactStory, Event } from '@/lib/supabase';
+import { supabase, NewsItem, ImpactStory, Event, VolunteerOpportunity } from '@/lib/supabase';
 
 export class ContentService {
   // News Items
@@ -148,6 +148,47 @@ export class ContentService {
       return data;
     } catch (err) {
       console.error('Network error fetching event:', err);
+      return null;
+    }
+  }
+
+  // Volunteer Opportunities
+  static async getVolunteerOpportunities(limit: number = 50): Promise<VolunteerOpportunity[]> {
+    try {
+      const { data, error } = await supabase
+        .from('volunteer_opportunities')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching volunteer opportunities:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Network error fetching volunteer opportunities:', err);
+      return [];
+    }
+  }
+
+  static async getVolunteerOpportunity(id: string): Promise<VolunteerOpportunity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('volunteer_opportunities')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching volunteer opportunity:', error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Network error fetching volunteer opportunity:', err);
       return null;
     }
   }
