@@ -53,13 +53,20 @@ export class UserActivityService {
   // Volunteer Sessions
   static async addVolunteerSession(session: Omit<VolunteerSession, 'id' | 'created_at' | 'updated_at'>) {
     try {
+      console.log('Adding volunteer session:', session);
+      
       const { data, error } = await supabase
         .from('user_volunteer_sessions')
         .insert([session])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error adding volunteer session:', error);
+        throw error;
+      }
+
+      console.log('Volunteer session added successfully:', data);
       return { data, error: null };
     } catch (error: any) {
       console.error('Error adding volunteer session:', error);
@@ -69,8 +76,33 @@ export class UserActivityService {
 
   static async updateVolunteerSessionStatus(sessionId: string, status: VolunteerSession['status']) {
     try {
-      console.log('Updating volunteer session status:', sessionId, 'to', status);
+      console.log('=== UPDATING VOLUNTEER SESSION STATUS ===');
+      console.log('Session ID:', sessionId);
+      console.log('New Status:', status);
       
+      if (!sessionId) {
+        throw new Error('Session ID is required');
+      }
+
+      if (!['registered', 'completed', 'cancelled'].includes(status)) {
+        throw new Error(`Invalid status: ${status}`);
+      }
+
+      // First, verify the session exists and get current data
+      const { data: currentSession, error: fetchError } = await supabase
+        .from('user_volunteer_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current session:', fetchError);
+        throw new Error(`Session not found: ${fetchError.message}`);
+      }
+
+      console.log('Current session data:', currentSession);
+
+      // Update the session status
       const { data, error } = await supabase
         .from('user_volunteer_sessions')
         .update({ 
@@ -83,13 +115,35 @@ export class UserActivityService {
 
       if (error) {
         console.error('Supabase error updating session status:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
 
       console.log('Session status updated successfully:', data);
+      console.log('Status changed from', currentSession.status, 'to', data.status);
+      
+      // Verify the update by fetching the record again
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('user_volunteer_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (verifyError) {
+        console.error('Error verifying update:', verifyError);
+      } else {
+        console.log('Verification - updated session:', verifyData);
+      }
+
       return { data, error: null };
     } catch (error: any) {
-      console.error('Error updating volunteer session status:', error);
+      console.error('=== ERROR UPDATING SESSION STATUS ===');
+      console.error('Error details:', error);
       return { data: null, error: error.message };
     }
   }
