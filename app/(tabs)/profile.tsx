@@ -26,10 +26,11 @@ export default function ProfileScreen() {
     const { data: { subscription } } = AuthService.onAuthStateChange((user, profile) => {
       console.log('Auth state changed in profile screen:', user ? 'User present' : 'No user', profile ? 'Profile present' : 'No profile');
       
+      // Always update states immediately
       setUser(user);
       setUserProfile(profile);
       setLoading(false);
-      setLoggingOut(false); // Reset logging out state
+      setLoggingOut(false);
       
       // Clear any previous profile errors when auth state changes
       setProfileError(null);
@@ -96,7 +97,10 @@ export default function ProfileScreen() {
                 setLoggingOut(false);
               } else {
                 console.log('Logout successful');
-                // Auth state change will handle clearing user/profile state
+                // Immediately clear states to ensure UI updates
+                setUser(null);
+                setUserProfile(null);
+                setLoggingOut(false);
               }
             } catch (error) {
               console.error('Logout exception:', error);
@@ -131,6 +135,7 @@ export default function ProfileScreen() {
     }
   };
 
+  // Show loading state
   if (loading || loggingOut) {
     return (
       <SafeAreaView style={styles.container}>
@@ -144,6 +149,7 @@ export default function ProfileScreen() {
     );
   }
 
+  // Show login screen if no user
   if (!user) {
     return (
       <>
@@ -220,6 +226,7 @@ export default function ProfileScreen() {
     );
   }
 
+  // User is logged in and has profile - show full profile screen
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -481,9 +488,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 12,
     color: Colors.textSecondary,
-  },
-  logoutButton: {
-    padding: 8,
   },
   section: {
     marginBottom: 24,
