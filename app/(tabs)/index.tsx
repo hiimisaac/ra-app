@@ -21,12 +21,22 @@ export default function HomeScreen() {
   const [featuredStories, setFeaturedStories] = useState<ImpactStoryType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    loadContent();
+    setMounted(true);
+    return () => setMounted(false);
   }, []);
 
+  useEffect(() => {
+    if (mounted) {
+      loadContent();
+    }
+  }, [mounted]);
+
   const loadContent = async () => {
+    if (!mounted) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -37,19 +47,27 @@ export default function HomeScreen() {
         ContentService.getFeaturedStories()
       ]);
       
-      setNewsItems(newsData);
-      setImpactStories(storiesData.filter(story => !story.is_featured));
-      setFeaturedStories(featuredData);
+      if (mounted) {
+        setNewsItems(newsData);
+        setImpactStories(storiesData.filter(story => !story.is_featured));
+        setFeaturedStories(featuredData);
+      }
     } catch (err) {
       console.error('Error loading content:', err);
-      setError('Failed to load content');
+      if (mounted) {
+        setError('Failed to load content');
+      }
     } finally {
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     }
   };
 
   const handleFeaturedStoryPress = (story: ImpactStoryType) => {
-    router.push(`/(tabs)/story/${story.id}`);
+    if (mounted) {
+      router.push(`/(tabs)/story/${story.id}`);
+    }
   };
   
   const renderFeaturedStories = () => {
@@ -129,6 +147,10 @@ export default function HomeScreen() {
       </View>
     );
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   if (loading) {
     return (
