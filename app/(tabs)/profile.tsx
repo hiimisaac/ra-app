@@ -530,19 +530,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   logoContainer: {
-    backgroundColor: Colors.primary,
-    padding: 24,
-    borderRadius: 50,
     marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 120,
+    height: 120,
   },
   loginTitle: {
     fontFamily: 'Inter-Bold',
