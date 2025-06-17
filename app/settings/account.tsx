@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Mail, Lock, Shield, Bell, Eye, EyeOff, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Lock, Shield, Eye, EyeOff, Trash2 } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import Button from '@/components/ui/Button';
 import { AuthService, UserProfile } from '@/lib/auth';
@@ -24,7 +24,6 @@ export default function AccountSettingsScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   
   // Settings state
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [loginNotifications, setLoginNotifications] = useState(true);
   const [dataExportEnabled, setDataExportEnabled] = useState(true);
 
@@ -317,21 +316,6 @@ export default function AccountSettingsScreen() {
               />
             </View>
           )}
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Two-Factor Authentication</Text>
-              <Text style={styles.settingDescription}>
-                Add an extra layer of security to your account
-              </Text>
-            </View>
-            <Switch
-              value={twoFactorEnabled}
-              onValueChange={setTwoFactorEnabled}
-              trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-              thumbColor={twoFactorEnabled ? Colors.primary : Colors.muted}
-            />
-          </View>
 
           <View style={styles.settingItem}>
             <View style={styles.settingContent}>
