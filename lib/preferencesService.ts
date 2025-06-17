@@ -24,19 +24,59 @@ export interface OpportunityMatch {
 }
 
 export class PreferencesService {
-  // Save user preferences
+  // Save user preferences with better error handling
   static async saveUserPreferences(preferences: Omit<VolunteerPreferences, 'id' | 'created_at' | 'updated_at'>) {
     try {
-      const { data, error } = await supabase
+      console.log('Saving preferences to database:', preferences);
+      
+      // First check if preferences already exist
+      const { data: existingPrefs } = await supabase
         .from('user_volunteer_preferences')
-        .upsert([preferences], { 
-          onConflict: 'user_id',
-          ignoreDuplicates: false 
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('user_id', preferences.user_id)
+        .maybeSingle();
 
-      if (error) throw error;
+      let result;
+      
+      if (existingPrefs) {
+        // Update existing preferences
+        console.log('Updating existing preferences for user:', preferences.user_id);
+        result = await supabase
+          .from('user_volunteer_preferences')
+          .update({
+            interest_areas: preferences.interest_areas,
+            time_preferences: preferences.time_preferences,
+            commitment_levels: preferences.commitment_levels,
+            notification_settings: preferences.notification_settings,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', preferences.user_id)
+          .select()
+          .single();
+      } else {
+        // Insert new preferences
+        console.log('Creating new preferences for user:', preferences.user_id);
+        result = await supabase
+          .from('user_volunteer_preferences')
+          .insert([{
+            user_id: preferences.user_id,
+            interest_areas: preferences.interest_areas,
+            time_preferences: preferences.time_preferences,
+            commitment_levels: preferences.commitment_levels,
+            notification_settings: preferences.notification_settings
+          }])
+          .select()
+          .single();
+      }
+
+      const { data, error } = result;
+
+      if (error) {
+        console.error('Supabase error saving preferences:', error);
+        throw error;
+      }
+
+      console.log('Preferences saved successfully:', data);
       return { data, error: null };
     } catch (error: any) {
       console.error('Error saving preferences:', error);
@@ -47,6 +87,8 @@ export class PreferencesService {
   // Get user preferences
   static async getUserPreferences(userId: string) {
     try {
+      console.log('Fetching preferences for user:', userId);
+      
       const { data, error } = await supabase
         .from('user_volunteer_preferences')
         .select('*')
@@ -54,9 +96,11 @@ export class PreferencesService {
         .maybeSingle();
 
       if (error) {
+        console.error('Supabase error fetching preferences:', error);
         throw error;
       }
 
+      console.log('Preferences fetched:', data ? 'Found' : 'Not found');
       return { data: data || null, error: null };
     } catch (error: any) {
       console.error('Error fetching preferences:', error);
@@ -67,10 +111,13 @@ export class PreferencesService {
   // Get recommended opportunities based on preferences
   static async getRecommendedOpportunities(userId: string, limit: number = 10) {
     try {
+      console.log('Getting recommended opportunities for user:', userId);
+      
       // First get user preferences
       const { data: preferences } = await this.getUserPreferences(userId);
       
-      if (!preferences) {
+      if (!preferences || !preferences.interest_areas || preferences.interest_areas.length === 0) {
+        console.log('No preferences found, returning all opportunities');
         // Return all opportunities if no preferences set
         const { data, error } = await supabase
           .from('volunteer_opportunities')
@@ -82,25 +129,19 @@ export class PreferencesService {
         return { data: data || [], error: null };
       }
 
+      console.log('User has preferences, filtering opportunities by:', preferences.interest_areas);
+
       // Build query based on preferences
-      let query = supabase
+      const { data, error } = await supabase
         .from('volunteer_opportunities')
-        .select('*');
-
-      // Filter by interest areas if specified
-      if (preferences.interest_areas && preferences.interest_areas.length > 0) {
-        query = query.in('interest_area', preferences.interest_areas);
-      }
-
-      // Add time-based filtering logic here if you have time fields
-      // For now, just order by creation date
-      query = query
+        .select('*')
+        .in('interest_area', preferences.interest_areas)
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      const { data, error } = await query;
-
       if (error) throw error;
+      
+      console.log('Recommended opportunities found:', data?.length || 0);
       return { data: data || [], error: null };
     } catch (error: any) {
       console.error('Error getting recommended opportunities:', error);
@@ -118,17 +159,10 @@ export class PreferencesService {
       score += 40;
     }
 
-    // Location preference (30% of score) - if you add location back
-    // if (preferences.preferred_locations?.includes(opportunity.location)) {
-    //   score += 30;
-    // }
-
     // Time preference matching (30% of score)
-    // This would require more complex logic based on opportunity timing
     if (opportunity.date) {
       const opportunityDate = new Date(opportunity.date);
       const dayOfWeek = opportunityDate.getDay();
-      const hour = opportunityDate.getHours();
 
       // Simple time matching logic
       if (preferences.time_preferences.includes('Flexible Schedule')) {
@@ -139,6 +173,12 @@ export class PreferencesService {
       ) {
         score += 20;
       }
+    }
+
+    // Commitment level matching (30% of score)
+    if (preferences.commitment_levels.length > 0) {
+      // This would need more sophisticated matching based on opportunity type
+      score += 15; // Base score for having commitment preferences
     }
 
     return Math.min(score, maxScore);
@@ -169,6 +209,14 @@ export class PreferencesService {
             matchingCriteria.push('Interest Area');
           }
 
+          if (preferences.time_preferences.length > 0) {
+            matchingCriteria.push('Time Preference');
+          }
+
+          if (preferences.commitment_levels.length > 0) {
+            matchingCriteria.push('Commitment Level');
+          }
+
           return {
             opportunity_id: opportunity.id.toString(),
             match_score: matchScore,
@@ -189,6 +237,8 @@ export class PreferencesService {
   // Update notification preferences only
   static async updateNotificationPreferences(userId: string, notificationSettings: VolunteerPreferences['notification_settings']) {
     try {
+      console.log('Updating notification preferences for user:', userId);
+      
       const { data, error } = await supabase
         .from('user_volunteer_preferences')
         .update({ 
@@ -199,11 +249,32 @@ export class PreferencesService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating notification preferences:', error);
+        throw error;
+      }
+
+      console.log('Notification preferences updated successfully');
       return { data, error: null };
     } catch (error: any) {
       console.error('Error updating notification preferences:', error);
       return { data: null, error: error.message };
+    }
+  }
+
+  // Delete user preferences
+  static async deleteUserPreferences(userId: string) {
+    try {
+      const { error } = await supabase
+        .from('user_volunteer_preferences')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error: any) {
+      console.error('Error deleting preferences:', error);
+      return { error: error.message };
     }
   }
 }
