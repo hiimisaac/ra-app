@@ -45,3 +45,13 @@ export interface Event {
   updated_at: string;
   is_published: boolean;
 }
+
+export interface VolunteerOpportunity {
+  id: number;
+  title: string;
+  location: string | null;
+  date: string | null;
+  interest_area: string | null;
+  description: string | null;
+  created_at: string | null;
+}
