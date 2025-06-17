@@ -1,16 +1,44 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar as CalendarIcon, Filter } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import Header from '@/components/Header';
 import EventCard from '@/components/EventCard';
 import FilterChip from '@/components/ui/FilterChip';
-import { events, eventCategories } from '@/data/mockData';
+import { ContentService } from '@/services/contentService';
+import { Event } from '@/lib/supabase';
 
 export default function EventsScreen() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [upcomingOnly, setUpcomingOnly] = useState(true);
+  const [eventCategories, setEventCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const eventsData = await ContentService.getUpcomingEvents(50); // Get more events for filtering
+      setEvents(eventsData);
+      
+      // Extract unique categories from events
+      const categories = [...new Set(eventsData.map(event => event.category))];
+      setEventCategories(categories);
+    } catch (err) {
+      console.error('Error loading events:', err);
+      setError('Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleCategory = (category: string) => {
     if (selectedCategories.includes(category)) {
@@ -22,7 +50,7 @@ export default function EventsScreen() {
 
   const filteredEvents = events.filter(event => {
     // Filter by upcoming
-    if (upcomingOnly && new Date(event.date) < new Date()) {
+    if (upcomingOnly && new Date(event.event_date) < new Date()) {
       return false;
     }
     
@@ -33,6 +61,32 @@ export default function EventsScreen() {
     
     return true;
   });
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Events" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading events...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Events" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadEvents}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,16 +124,20 @@ export default function EventsScreen() {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No events match your filters</Text>
-          <TouchableOpacity 
-            style={styles.resetButton}
-            onPress={() => {
-              setSelectedCategories([]);
-              setUpcomingOnly(true);
-            }}
-          >
-            <Text style={styles.resetText}>Reset Filters</Text>
-          </TouchableOpacity>
+          <Text style={styles.emptyText}>
+            {events.length === 0 ? 'No events available' : 'No events match your filters'}
+          </Text>
+          {events.length > 0 && (
+            <TouchableOpacity 
+              style={styles.resetButton}
+              onPress={() => {
+                setSelectedCategories([]);
+                setUpcomingOnly(true);
+              }}
+            >
+              <Text style={styles.resetText}>Reset Filters</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </SafeAreaView>
@@ -123,6 +181,41 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   resetText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.white,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 12,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryText: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: Colors.white,

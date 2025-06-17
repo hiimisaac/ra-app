@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MapPin, Calendar, Clock, Users } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
-import { EventType } from '@/types';
+import { Event } from '@/lib/supabase';
 
 interface EventCardProps {
-  event: EventType;
+  event: Event;
 }
 
 export default function EventCard({ event }: EventCardProps) {
@@ -28,7 +28,9 @@ export default function EventCard({ event }: EventCardProps) {
 
   return (
     <TouchableOpacity style={styles.container}>
-      <Image source={{ uri: event.imageUrl }} style={styles.image} />
+      {event.image_url && (
+        <Image source={{ uri: event.image_url }} style={styles.image} />
+      )}
       <View style={styles.content}>
         <View style={styles.categoryContainer}>
           <Text style={styles.category}>{event.category}</Text>
@@ -38,12 +40,12 @@ export default function EventCard({ event }: EventCardProps) {
         <View style={styles.detailsContainer}>
           <View style={styles.detailItem}>
             <Calendar size={16} color={Colors.primary} style={styles.detailIcon} />
-            <Text style={styles.detailText}>{formatDate(event.date)}</Text>
+            <Text style={styles.detailText}>{formatDate(event.event_date)}</Text>
           </View>
           
           <View style={styles.detailItem}>
             <Clock size={16} color={Colors.primary} style={styles.detailIcon} />
-            <Text style={styles.detailText}>{formatTime(event.date)}</Text>
+            <Text style={styles.detailText}>{formatTime(event.event_date)}</Text>
           </View>
           
           <View style={styles.detailItem}>
@@ -51,29 +53,24 @@ export default function EventCard({ event }: EventCardProps) {
             <Text style={styles.detailText}>{event.location}</Text>
           </View>
           
-          {event.attendees && (
+          {event.current_attendees > 0 && (
             <View style={styles.detailItem}>
               <Users size={16} color={Colors.primary} style={styles.detailIcon} />
-              <Text style={styles.detailText}>{event.attendees} attending</Text>
+              <Text style={styles.detailText}>
+                {event.current_attendees}
+                {event.max_attendees > 0 && ` / ${event.max_attendees}`} attending
+              </Text>
             </View>
           )}
         </View>
         
+        <Text style={styles.description} numberOfLines={3}>
+          {event.description}
+        </Text>
+        
         <View style={styles.footer}>
-          <TouchableOpacity 
-            style={[
-              styles.rsvpButton,
-              event.isRSVPed ? styles.rsvpButtonActive : {}
-            ]}
-          >
-            <Text 
-              style={[
-                styles.rsvpButtonText,
-                event.isRSVPed ? styles.rsvpButtonTextActive : {}
-              ]}
-            >
-              {event.isRSVPed ? 'Going' : 'RSVP'}
-            </Text>
+          <TouchableOpacity style={styles.rsvpButton}>
+            <Text style={styles.rsvpButtonText}>RSVP</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.calendarButton}>
@@ -125,7 +122,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   detailsContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   detailItem: {
     flexDirection: 'row',
@@ -140,14 +137,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
+  description: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   rsvpButton: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 24,
@@ -155,15 +157,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
     alignItems: 'center',
   },
-  rsvpButtonActive: {
-    backgroundColor: Colors.primary,
-  },
   rsvpButtonText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
-    color: Colors.primary,
-  },
-  rsvpButtonTextActive: {
     color: Colors.white,
   },
   calendarButton: {
