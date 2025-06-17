@@ -297,12 +297,16 @@ export default function ProfileScreen() {
       <>
         <SafeAreaView style={styles.container}>
           <View style={styles.loginContainer}>
-            <View style={styles.iconContainer}>
-              <User size={80} color={Colors.primary} />
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('@/assets/images/ra-logo-white.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.loginTitle}>Join Our Community</Text>
+            <Text style={styles.loginTitle}>Join Riley's Army</Text>
             <Text style={styles.loginSubtitle}>
-              Sign up to track your volunteer activities, RSVP to events, and connect with other volunteers making a difference.
+              Sign up to track your volunteer activities, RSVP to events, and connect with other volunteers making a difference in our community.
             </Text>
             
             <View style={styles.benefitsList}>
@@ -346,8 +350,12 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <View style={styles.iconContainer}>
-            <User size={80} color={Colors.textSecondary} />
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('@/assets/images/ra-logo-white.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.errorTitle}>Profile Setup Issue</Text>
           <Text style={styles.errorMessage}>
@@ -521,11 +529,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-  iconContainer: {
-    backgroundColor: Colors.primaryLight,
+  logoContainer: {
+    backgroundColor: Colors.primary,
     padding: 24,
     borderRadius: 50,
     marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logo: {
+    width: 80,
+    height: 80,
   },
   loginTitle: {
     fontFamily: 'Inter-Bold',
