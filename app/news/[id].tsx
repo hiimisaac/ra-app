@@ -6,6 +6,8 @@ import { ArrowLeft, Share, Calendar } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import { ContentService } from '@/services/contentService';
 import { NewsItem } from '@/lib/supabase';
+import { shareContent, getShareUrl } from '@/utils/shareUtils';
+import Toast from '@/components/ui/Toast';
 
 export default function NewsDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -13,6 +15,8 @@ export default function NewsDetailScreen() {
   const [newsItem, setNewsItem] = useState<NewsItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     loadNewsItem();
@@ -38,6 +42,24 @@ export default function NewsDetailScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleShare = async () => {
+    if (!newsItem) return;
+    
+    const shareUrl = getShareUrl('news', newsItem.id);
+    const success = await shareContent({
+      title: newsItem.title,
+      text: newsItem.excerpt,
+      url: shareUrl,
+    });
+
+    if (success) {
+      setToastMessage('Article shared successfully!');
+    } else {
+      setToastMessage('Link copied to clipboard!');
+    }
+    setShowToast(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -84,44 +106,53 @@ export default function NewsDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.shareButton}>
-          <Share size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {newsItem.image_url && (
-          <Image source={{ uri: newsItem.image_url }} style={styles.heroImage} />
-        )}
-        
-        <View style={styles.content}>
-          <View style={styles.dateContainer}>
-            <Calendar size={16} color={Colors.textSecondary} style={styles.dateIcon} />
-            <Text style={styles.date}>{formatDate(newsItem.published_at)}</Text>
-          </View>
-          
-          <Text style={styles.title}>{newsItem.title}</Text>
-          
-          <Text style={styles.excerpt}>{newsItem.excerpt}</Text>
-          
-          <View style={styles.divider} />
-          
-          <Text style={styles.body}>{newsItem.content}</Text>
-          
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.shareFooterButton}>
-              <Share size={20} color={Colors.primary} style={styles.shareIcon} />
-              <Text style={styles.shareFooterText}>Share this article</Text>
-            </TouchableOpacity>
-          </View>
+    <>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+            <Share size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {newsItem.image_url && (
+            <Image source={{ uri: newsItem.image_url }} style={styles.heroImage} />
+          )}
+          
+          <View style={styles.content}>
+            <View style={styles.dateContainer}>
+              <Calendar size={16} color={Colors.textSecondary} style={styles.dateIcon} />
+              <Text style={styles.date}>{formatDate(newsItem.published_at)}</Text>
+            </View>
+            
+            <Text style={styles.title}>{newsItem.title}</Text>
+            
+            <Text style={styles.excerpt}>{newsItem.excerpt}</Text>
+            
+            <View style={styles.divider} />
+            
+            <Text style={styles.body}>{newsItem.content}</Text>
+            
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.shareFooterButton} onPress={handleShare}>
+                <Share size={20} color={Colors.primary} style={styles.shareIcon} />
+                <Text style={styles.shareFooterText}>Share this article</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+      
+      <Toast
+        message={toastMessage}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+        type="success"
+      />
+    </>
   );
 }
 
