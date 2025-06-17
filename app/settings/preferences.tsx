@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Heart, Clock, Bell, Target, Zap, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Heart, Clock, Bell, Target, Zap, CircleCheck as CheckCircle, Database } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import Button from '@/components/ui/Button';
 import FilterChip from '@/components/ui/FilterChip';
@@ -48,6 +48,7 @@ export default function VolunteerPreferencesScreen() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   
   // Preferences state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -70,6 +71,7 @@ export default function VolunteerPreferencesScreen() {
 
   const checkAuthState = async () => {
     const currentUser = await AuthService.getCurrentUser();
+    console.log('Current user in preferences:', currentUser);
     setUser(currentUser);
     
     if (currentUser) {
@@ -81,6 +83,8 @@ export default function VolunteerPreferencesScreen() {
   const loadPreferences = async (userId: string) => {
     try {
       setInitialLoading(true);
+      console.log('Loading preferences for user:', userId);
+      
       const { data: preferences, error } = await PreferencesService.getUserPreferences(userId);
       
       if (error) {
@@ -89,6 +93,7 @@ export default function VolunteerPreferencesScreen() {
       }
 
       if (preferences) {
+        console.log('Loaded preferences:', preferences);
         setSelectedCategories(preferences.interest_areas || []);
         setSelectedTimes(preferences.time_preferences || []);
         setSelectedCommitments(preferences.commitment_levels || []);
@@ -101,6 +106,8 @@ export default function VolunteerPreferencesScreen() {
         setReminderNotifications(notifications.reminders ?? true);
         
         setHasChanges(false); // Reset changes flag after loading
+      } else {
+        console.log('No preferences found for user');
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -133,6 +140,32 @@ export default function VolunteerPreferencesScreen() {
     }
   };
 
+  const handleDebugDatabase = async () => {
+    if (!user) return;
+    
+    console.log('=== DEBUGGING DATABASE ===');
+    
+    // Test connection
+    const connectionTest = await PreferencesService.testConnection();
+    console.log('Connection test:', connectionTest);
+    
+    // Get all preferences
+    const allPrefs = await PreferencesService.getAllPreferences();
+    console.log('All preferences in database:', allPrefs);
+    
+    // Try to get current user preferences
+    const userPrefs = await PreferencesService.getUserPreferences(user.id);
+    console.log('Current user preferences:', userPrefs);
+    
+    Alert.alert(
+      'Debug Results',
+      `Connection: ${connectionTest.connected ? 'OK' : 'FAILED'}\n` +
+      `Total preferences in DB: ${allPrefs.data.length}\n` +
+      `Your preferences: ${userPrefs.data ? 'Found' : 'Not found'}\n\n` +
+      'Check console for detailed logs.'
+    );
+  };
+
   const handleSavePreferences = async () => {
     if (!user) {
       Alert.alert('Error', 'Please sign in to save your preferences');
@@ -141,6 +174,10 @@ export default function VolunteerPreferencesScreen() {
 
     setLoading(true);
     try {
+      console.log('=== STARTING SAVE PROCESS ===');
+      console.log('User ID:', user.id);
+      console.log('User email:', user.email);
+      
       const preferences: Omit<VolunteerPreferences, 'id' | 'created_at' | 'updated_at'> = {
         user_id: user.id,
         interest_areas: selectedCategories,
@@ -155,14 +192,16 @@ export default function VolunteerPreferencesScreen() {
         }
       };
 
-      console.log('Saving preferences:', preferences);
+      console.log('Preferences to save:', JSON.stringify(preferences, null, 2));
       
       const { data, error } = await PreferencesService.saveUserPreferences(preferences);
       
       if (error) {
+        console.error('Save failed with error:', error);
         throw new Error(error);
       }
       
+      console.log('Save completed successfully:', data);
       setHasChanges(false);
       
       Alert.alert(
@@ -177,7 +216,10 @@ export default function VolunteerPreferencesScreen() {
       );
     } catch (error: any) {
       console.error('Error saving preferences:', error);
-      Alert.alert('Error', error.message || 'Failed to save preferences. Please try again.');
+      Alert.alert(
+        'Error', 
+        `Failed to save preferences: ${error.message}\n\nPlease check the console for detailed logs and try again.`
+      );
     } finally {
       setLoading(false);
     }
@@ -236,9 +278,26 @@ export default function VolunteerPreferencesScreen() {
           <ArrowLeft size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Volunteer Preferences</Text>
+        <TouchableOpacity 
+          style={styles.debugButton} 
+          onPress={() => setDebugMode(!debugMode)}
+        >
+          <Database size={20} color={debugMode ? Colors.primary : Colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {debugMode && (
+          <View style={styles.debugSection}>
+            <Text style={styles.debugTitle}>Debug Information</Text>
+            <Text style={styles.debugText}>User ID: {user?.id || 'Not logged in'}</Text>
+            <Text style={styles.debugText}>User Email: {user?.email || 'N/A'}</Text>
+            <TouchableOpacity style={styles.debugTestButton} onPress={handleDebugDatabase}>
+              <Text style={styles.debugTestText}>Test Database Connection</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.introSection}>
           <Text style={styles.introTitle}>Personalize Your Experience</Text>
           <Text style={styles.introDescription}>
@@ -484,6 +543,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     fontSize: 20,
     color: Colors.textPrimary,
+    flex: 1,
+  },
+  debugButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
@@ -498,6 +561,39 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 16,
     color: Colors.textSecondary,
+  },
+  debugSection: {
+    backgroundColor: Colors.warning + '20',
+    borderRadius: 8,
+    padding: 16,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: Colors.warning + '50',
+  },
+  debugTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: Colors.warning,
+    marginBottom: 8,
+  },
+  debugText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  debugTestButton: {
+    backgroundColor: Colors.warning,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  debugTestText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: Colors.white,
   },
   introSection: {
     backgroundColor: Colors.primaryLight + '15',

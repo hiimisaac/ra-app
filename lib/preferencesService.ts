@@ -24,87 +24,203 @@ export interface OpportunityMatch {
 }
 
 export class PreferencesService {
-  // Save user preferences with better error handling
+  // Test database connection
+  static async testConnection() {
+    try {
+      console.log('Testing Supabase connection...');
+      const { data, error } = await supabase
+        .from('user_volunteer_preferences')
+        .select('count(*)')
+        .limit(1);
+      
+      console.log('Connection test result:', { data, error });
+      return { connected: !error, error };
+    } catch (error: any) {
+      console.error('Connection test failed:', error);
+      return { connected: false, error: error.message };
+    }
+  }
+
+  // Save user preferences with extensive debugging
   static async saveUserPreferences(preferences: Omit<VolunteerPreferences, 'id' | 'created_at' | 'updated_at'>) {
     try {
-      console.log('Saving preferences to database:', preferences);
+      console.log('=== STARTING PREFERENCES SAVE ===');
+      console.log('Input preferences:', JSON.stringify(preferences, null, 2));
       
-      // First check if preferences already exist
-      const { data: existingPrefs } = await supabase
+      // Test connection first
+      const connectionTest = await this.testConnection();
+      console.log('Connection test:', connectionTest);
+      
+      if (!connectionTest.connected) {
+        throw new Error(`Database connection failed: ${connectionTest.error}`);
+      }
+
+      // Validate user_id
+      if (!preferences.user_id) {
+        throw new Error('user_id is required');
+      }
+
+      console.log('Checking for existing preferences for user:', preferences.user_id);
+      
+      // Check if preferences already exist
+      const { data: existingPrefs, error: selectError } = await supabase
         .from('user_volunteer_preferences')
-        .select('id')
+        .select('id, user_id, created_at')
         .eq('user_id', preferences.user_id)
         .maybeSingle();
+
+      console.log('Existing preferences check:', { 
+        found: !!existingPrefs, 
+        data: existingPrefs, 
+        error: selectError 
+      });
+
+      if (selectError) {
+        console.error('Error checking existing preferences:', selectError);
+        throw selectError;
+      }
+
+      // Prepare the data to save
+      const dataToSave = {
+        user_id: preferences.user_id,
+        interest_areas: preferences.interest_areas || [],
+        time_preferences: preferences.time_preferences || [],
+        commitment_levels: preferences.commitment_levels || [],
+        notification_settings: preferences.notification_settings || {
+          email: true,
+          push: true,
+          weekly_digest: true,
+          opportunity_alerts: true,
+          reminders: true
+        }
+      };
+
+      console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
 
       let result;
       
       if (existingPrefs) {
         // Update existing preferences
-        console.log('Updating existing preferences for user:', preferences.user_id);
+        console.log('UPDATING existing preferences...');
         result = await supabase
           .from('user_volunteer_preferences')
           .update({
-            interest_areas: preferences.interest_areas,
-            time_preferences: preferences.time_preferences,
-            commitment_levels: preferences.commitment_levels,
-            notification_settings: preferences.notification_settings,
+            ...dataToSave,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', preferences.user_id)
-          .select()
+          .select('*')
           .single();
       } else {
         // Insert new preferences
-        console.log('Creating new preferences for user:', preferences.user_id);
+        console.log('INSERTING new preferences...');
         result = await supabase
           .from('user_volunteer_preferences')
-          .insert([{
-            user_id: preferences.user_id,
-            interest_areas: preferences.interest_areas,
-            time_preferences: preferences.time_preferences,
-            commitment_levels: preferences.commitment_levels,
-            notification_settings: preferences.notification_settings
-          }])
-          .select()
+          .insert([dataToSave])
+          .select('*')
           .single();
       }
 
       const { data, error } = result;
 
+      console.log('Database operation result:', {
+        success: !error,
+        data: data,
+        error: error
+      });
+
       if (error) {
         console.error('Supabase error saving preferences:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
 
-      console.log('Preferences saved successfully:', data);
+      console.log('=== PREFERENCES SAVED SUCCESSFULLY ===');
+      console.log('Saved data:', JSON.stringify(data, null, 2));
+
+      // Verify the save by reading it back
+      console.log('Verifying save by reading back...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('user_volunteer_preferences')
+        .select('*')
+        .eq('user_id', preferences.user_id)
+        .single();
+
+      console.log('Verification result:', {
+        found: !!verifyData,
+        data: verifyData,
+        error: verifyError
+      });
+
       return { data, error: null };
     } catch (error: any) {
-      console.error('Error saving preferences:', error);
+      console.error('=== ERROR SAVING PREFERENCES ===');
+      console.error('Error details:', error);
+      console.error('Error stack:', error.stack);
       return { data: null, error: error.message };
     }
   }
 
-  // Get user preferences
+  // Get user preferences with debugging
   static async getUserPreferences(userId: string) {
     try {
+      console.log('=== FETCHING PREFERENCES ===');
       console.log('Fetching preferences for user:', userId);
       
+      if (!userId) {
+        throw new Error('userId is required');
+      }
+
       const { data, error } = await supabase
         .from('user_volunteer_preferences')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
+      console.log('Fetch result:', {
+        found: !!data,
+        data: data,
+        error: error
+      });
+
       if (error) {
         console.error('Supabase error fetching preferences:', error);
         throw error;
       }
 
-      console.log('Preferences fetched:', data ? 'Found' : 'Not found');
+      console.log('=== PREFERENCES FETCHED ===');
       return { data: data || null, error: null };
     } catch (error: any) {
-      console.error('Error fetching preferences:', error);
+      console.error('=== ERROR FETCHING PREFERENCES ===');
+      console.error('Error details:', error);
       return { data: null, error: error.message };
+    }
+  }
+
+  // List all preferences (for debugging)
+  static async getAllPreferences() {
+    try {
+      console.log('Fetching ALL preferences for debugging...');
+      const { data, error } = await supabase
+        .from('user_volunteer_preferences')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      console.log('All preferences:', {
+        count: data?.length || 0,
+        data: data,
+        error: error
+      });
+
+      return { data: data || [], error: error?.message || null };
+    } catch (error: any) {
+      console.error('Error fetching all preferences:', error);
+      return { data: [], error: error.message };
     }
   }
 
