@@ -20,6 +20,16 @@ export interface SignInData {
   password: string;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  volunteer_hours: number;
+  events_attended: number;
+  donations_made: number;
+}
+
 export class AuthService {
   static async signUp({ email, password, name }: SignUpData) {
     try {
@@ -101,7 +111,7 @@ export class AuthService {
     }
   }
 
-  static async ensureUserProfile(user: User) {
+  static async ensureUserProfile(user: User): Promise<{ profile: UserProfile | null; error: string | null }> {
     try {
       // Check if profile already exists
       const { profile: existingProfile } = await this.getUserProfile(user.id);
@@ -162,16 +172,22 @@ export class AuthService {
     }
   }
 
-  static onAuthStateChange(callback: (user: User | null) => void) {
+  static onAuthStateChange(callback: (user: User | null, userProfile: UserProfile | null) => void) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user || null;
+      let userProfile: UserProfile | null = null;
       
       // If user just signed in, ensure they have a profile
       if (user && event === 'SIGNED_IN') {
-        await this.ensureUserProfile(user);
+        const { profile } = await this.ensureUserProfile(user);
+        userProfile = profile;
+      } else if (user) {
+        // For other events, try to get existing profile
+        const { profile } = await this.getUserProfile(user.id);
+        userProfile = profile;
       }
       
-      callback(user);
+      callback(user, userProfile);
     });
   }
 }

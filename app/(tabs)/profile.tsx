@@ -7,38 +7,33 @@ import Button from '@/components/ui/Button';
 import ProfileStats from '@/components/ProfileStats';
 import UserActivityItem from '@/components/UserActivityItem';
 import AuthModal from '@/components/auth/AuthModal';
-import { AuthService } from '@/lib/auth';
+import { AuthService, UserProfile } from '@/lib/auth';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { userActivities } from '@/data/mockData';
-
-interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar_url?: string;
-  volunteer_hours: number;
-  events_attended: number;
-  donations_made: number;
-}
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthState();
     
     // Listen for auth state changes
-    const { data: { subscription } } = AuthService.onAuthStateChange((user) => {
+    const { data: { subscription } } = AuthService.onAuthStateChange((user, profile) => {
       setUser(user);
-      if (user) {
-        loadUserProfile(user.id);
-      } else {
-        setUserProfile(null);
-      }
+      setUserProfile(profile);
       setLoading(false);
+      
+      // Clear any previous profile errors when auth state changes
+      setProfileError(null);
+      
+      // If user exists but no profile, show error
+      if (user && !profile) {
+        setProfileError('Unable to load or create user profile. Please try signing out and back in.');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -50,27 +45,18 @@ export default function ProfileScreen() {
       setUser(currentUser);
       
       if (currentUser) {
-        await loadUserProfile(currentUser.id);
+        const { profile, error } = await AuthService.ensureUserProfile(currentUser);
+        setUserProfile(profile);
+        
+        if (currentUser && !profile) {
+          setProfileError(error || 'Unable to load or create user profile. Please try signing out and back in.');
+        }
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
+      setProfileError('An error occurred while loading your profile.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { profile, error } = await AuthService.getUserProfile(userId);
-      
-      if (error) {
-        console.error('Error loading user profile:', error);
-        return;
-      }
-      
-      setUserProfile(profile);
-    } catch (error) {
-      console.error('Error loading user profile:', error);
     }
   };
 
@@ -80,6 +66,7 @@ export default function ProfileScreen() {
 
   const handleAuthSuccess = () => {
     // Auth state change will be handled by the listener
+    setProfileError(null);
   };
 
   const handleLogout = () => {
@@ -105,6 +92,27 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleRetryProfile = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    setProfileError(null);
+    
+    try {
+      const { profile, error } = await AuthService.ensureUserProfile(user);
+      setUserProfile(profile);
+      
+      if (!profile) {
+        setProfileError(error || 'Unable to create user profile. Please contact support.');
+      }
+    } catch (error) {
+      console.error('Error retrying profile creation:', error);
+      setProfileError('An error occurred while creating your profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -116,7 +124,7 @@ export default function ProfileScreen() {
     );
   }
 
-  if (!user || !userProfile) {
+  if (!user) {
     return (
       <>
         <SafeAreaView style={styles.container}>
@@ -161,6 +169,34 @@ export default function ProfileScreen() {
           onSuccess={handleAuthSuccess}
         />
       </>
+    );
+  }
+
+  // User is logged in but profile failed to load/create
+  if (user && !userProfile) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <View style={styles.iconContainer}>
+            <User size={80} color={Colors.textSecondary} />
+          </View>
+          <Text style={styles.errorTitle}>Profile Setup Issue</Text>
+          <Text style={styles.errorMessage}>
+            {profileError || 'We encountered an issue setting up your profile. This might be because your email needs to be confirmed.'}
+          </Text>
+          
+          <View style={styles.errorActions}>
+            <Button 
+              title="Try Again" 
+              onPress={handleRetryProfile}
+              style={styles.retryButton}
+            />
+            <TouchableOpacity style={styles.logoutTextButton} onPress={handleLogout}>
+              <Text style={styles.logoutTextButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -278,6 +314,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
   iconContainer: {
     backgroundColor: Colors.primaryLight,
     padding: 24,
@@ -291,7 +333,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  errorTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    color: Colors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   loginSubtitle: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  errorMessage: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: Colors.textSecondary,
@@ -321,6 +378,22 @@ const styles = StyleSheet.create({
   loginButton: {
     width: '100%',
     marginBottom: 16,
+  },
+  errorActions: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  retryButton: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  logoutTextButton: {
+    paddingVertical: 12,
+  },
+  logoutTextButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
   skipButton: {
     paddingVertical: 12,
