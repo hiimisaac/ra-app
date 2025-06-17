@@ -1,4 +1,5 @@
 import { supabase, NewsItem, ImpactStory, Event, VolunteerOpportunity } from '@/lib/supabase';
+import { PreferencesService } from '@/lib/preferencesService';
 
 export class ContentService {
   // News Items
@@ -152,9 +153,18 @@ export class ContentService {
     }
   }
 
-  // Volunteer Opportunities
-  static async getVolunteerOpportunities(limit: number = 50): Promise<VolunteerOpportunity[]> {
+  // Volunteer Opportunities - Enhanced with preferences
+  static async getVolunteerOpportunities(limit: number = 50, userId?: string): Promise<VolunteerOpportunity[]> {
     try {
+      // If user is provided, try to get personalized recommendations
+      if (userId) {
+        const { data: recommendedOpportunities } = await PreferencesService.getRecommendedOpportunities(userId, limit);
+        if (recommendedOpportunities && recommendedOpportunities.length > 0) {
+          return recommendedOpportunities;
+        }
+      }
+
+      // Fallback to all opportunities
       const { data, error } = await supabase
         .from('volunteer_opportunities')
         .select('*')
@@ -169,6 +179,16 @@ export class ContentService {
       return data || [];
     } catch (err) {
       console.error('Network error fetching volunteer opportunities:', err);
+      return [];
+    }
+  }
+
+  static async getPersonalizedOpportunities(userId: string, limit: number = 20): Promise<VolunteerOpportunity[]> {
+    try {
+      const { data: opportunities } = await PreferencesService.getRecommendedOpportunities(userId, limit);
+      return opportunities || [];
+    } catch (err) {
+      console.error('Error fetching personalized opportunities:', err);
       return [];
     }
   }
