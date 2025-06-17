@@ -35,11 +35,8 @@ export class AuthService {
 
       if (error) throw error;
 
-      // Only create profile if user is confirmed (not pending email confirmation)
-      if (data.user && data.user.email_confirmed_at) {
-        await this.createUserProfile(data.user.id, { email, name });
-      }
-
+      // Don't create profile during signup - wait for email confirmation
+      // Profile will be created when user signs in after email confirmation
       return { user: data.user, error: null };
     } catch (error: any) {
       return { user: null, error: error.message };
@@ -55,16 +52,9 @@ export class AuthService {
 
       if (error) throw error;
 
-      // Check if user profile exists, create if it doesn't
+      // After successful sign in, ensure user profile exists
       if (data.user) {
-        const { profile } = await this.getUserProfile(data.user.id);
-        if (!profile) {
-          const userName = data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User';
-          await this.createUserProfile(data.user.id, { 
-            email: data.user.email!, 
-            name: userName 
-          });
-        }
+        await this.ensureUserProfile(data.user);
       }
 
       return { user: data.user, error: null };
@@ -111,14 +101,28 @@ export class AuthService {
     }
   }
 
-  static async createUserProfile(userId: string, userData: { email: string; name: string }) {
+  static async ensureUserProfile(user: User) {
     try {
-      // First check if profile already exists
-      const { profile: existingProfile } = await this.getUserProfile(userId);
+      // Check if profile already exists
+      const { profile: existingProfile } = await this.getUserProfile(user.id);
       if (existingProfile) {
         return { profile: existingProfile, error: null };
       }
 
+      // Create profile if it doesn't exist
+      const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+      return await this.createUserProfile(user.id, { 
+        email: user.email!, 
+        name: userName 
+      });
+    } catch (error: any) {
+      console.error('Error ensuring user profile:', error);
+      return { profile: null, error: error.message };
+    }
+  }
+
+  static async createUserProfile(userId: string, userData: { email: string; name: string }) {
+    try {
       const { data, error } = await supabase
         .from('user_profiles')
         .insert([
@@ -162,16 +166,9 @@ export class AuthService {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       const user = session?.user || null;
       
-      // If user just signed in and doesn't have a profile, create one
+      // If user just signed in, ensure they have a profile
       if (user && event === 'SIGNED_IN') {
-        const { profile } = await this.getUserProfile(user.id);
-        if (!profile) {
-          const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
-          await this.createUserProfile(user.id, { 
-            email: user.email!, 
-            name: userName 
-          });
-        }
+        await this.ensureUserProfile(user);
       }
       
       callback(user);
