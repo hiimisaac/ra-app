@@ -27,6 +27,10 @@ const Colors = {
   // Additional colors
   highlight: '#F59E0B',      // Amber highlight
   muted: '#9CA3AF',          // Muted gray
+  
+  // Special accent colors
+  readMore: '#D946EF',       // Soft pink-purple for read more buttons
+  accent: '#C084FC',         // Soft purple accent
 };
 
 export default Colors;

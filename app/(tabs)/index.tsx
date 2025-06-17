@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   readMoreButton: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.readMore,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 4,

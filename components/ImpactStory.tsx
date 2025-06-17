@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
-    color: Colors.primary,
+    color: Colors.readMore,
   },
   shareButton: {
     padding: 6,
