@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, LogOut, Award, Calendar, Settings, ChevronRight, Plus } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import Colors from '@/constants/Colors';
 import Button from '@/components/ui/Button';
 import ProfileStats from '@/components/ProfileStats';
@@ -70,6 +71,41 @@ export default function ProfileScreen() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Refresh profile data when screen comes into focus (e.g., returning from settings)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('ProfileScreen: Screen focused, refreshing profile data');
+      if (user && isMounted.current) {
+        refreshProfileData();
+      }
+    }, [user])
+  );
+
+  const refreshProfileData = async () => {
+    if (!user || !isMounted.current) return;
+    
+    try {
+      console.log('ProfileScreen: Refreshing profile data for user:', user.id);
+      const { profile, error } = await AuthService.getUserProfile(user.id);
+      
+      if (!isMounted.current) return;
+      
+      if (profile) {
+        console.log('ProfileScreen: Profile refreshed successfully:', profile);
+        setUserProfile(profile);
+        setProfileError(null);
+      } else if (error) {
+        console.error('ProfileScreen: Error refreshing profile:', error);
+        setProfileError(error);
+      }
+    } catch (error) {
+      console.error('ProfileScreen: Exception refreshing profile:', error);
+      if (isMounted.current) {
+        setProfileError('Failed to refresh profile data');
+      }
+    }
+  };
 
   const checkAuthState = async () => {
     try {
@@ -625,8 +661,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     fontSize: 18,
     color: Colors.textPrimary,
-    marginHorizontal: 16,
-    marginBottom: 16,
   },
   activityContainer: {
     paddingHorizontal: 16,

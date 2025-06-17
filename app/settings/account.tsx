@@ -57,18 +57,38 @@ export default function AccountSettingsScreen() {
 
     setLoading(true);
     try {
+      console.log('Updating profile with name:', name.trim());
+      
       const { profile, error } = await AuthService.updateUserProfile(user.id, {
         name: name.trim(),
-        email: email.trim(),
+        // Don't update email as it's read-only
       });
 
       if (error) {
+        console.error('Profile update error:', error);
         Alert.alert('Error', error);
         return;
       }
 
-      setUserProfile(profile);
-      Alert.alert('Success', 'Profile updated successfully!');
+      if (profile) {
+        console.log('Profile updated successfully:', profile);
+        setUserProfile(profile);
+        
+        // Show success and navigate back to refresh the main profile screen
+        Alert.alert(
+          'Success', 
+          'Profile updated successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate back to trigger a refresh of the profile screen
+                router.back();
+              }
+            }
+          ]
+        );
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
@@ -209,7 +229,7 @@ export default function AccountSettingsScreen() {
           <Button
             title={loading ? "Updating..." : "Update Profile"}
             onPress={handleUpdateProfile}
-            disabled={loading}
+            disabled={loading || !name.trim() || name.trim() === userProfile?.name}
             style={styles.updateButton}
           />
         </View>
