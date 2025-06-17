@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal } from 'react-native';
+import { MapPin, Calendar, Clock, Users, Heart, CircleCheck as CheckCircle, Info, X } from 'lucide-react-native';
 import { useState } from 'react';
 import Colors from '@/constants/Colors';
 import { VolunteerOpportunity } from '@/lib/supabase';
@@ -14,6 +14,7 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Date TBD';
@@ -124,165 +125,242 @@ export default function VolunteerCard({ opportunity }: VolunteerCardProps) {
 
   const handleLearnMore = () => {
     console.log('Learn More button pressed for opportunity:', opportunity.id);
-    
-    // Create a comprehensive details view
-    const details = [
-      `📋 ${opportunity.title}`,
-      '',
-      opportunity.interest_area ? `🏷️ Category: ${opportunity.interest_area}` : '',
-      opportunity.location ? `📍 Location: ${opportunity.location}` : '📍 Location: TBD',
-      opportunity.date ? `📅 Date: ${formatDate(opportunity.date)}` : '📅 Date: TBD',
-      opportunity.date ? `⏰ Time: ${formatTime(opportunity.date)}` : '⏰ Time: TBD',
-      '',
-      '📝 Description:',
-      opportunity.description || 'Join us for this meaningful volunteer opportunity to make a positive impact in our community.',
-      '',
-      '💡 What to expect:',
-      '• Meaningful work that makes a difference',
-      '• Opportunity to meet like-minded volunteers',
-      '• Skills development and community impact',
-      '• Recognition for your volunteer hours',
-      '',
-      '🤝 How to get involved:',
-      '• Click "Sign Up" to register for this opportunity',
-      '• You\'ll receive confirmation and details via email',
-      '• Your volunteer hours will be tracked automatically'
-    ].filter(Boolean).join('\n');
-
-    // Show the details in an alert
-    Alert.alert(
-      'Opportunity Details',
-      details,
-      [
-        { text: 'Close', style: 'cancel' },
-        { 
-          text: isSignedUp ? 'Already Signed Up' : 'Sign Up Now', 
-          onPress: isSignedUp ? undefined : handleSignUp,
-          style: isSignedUp ? 'default' : 'default'
-        }
-      ],
-      { 
-        cancelable: true,
-        userInterfaceStyle: 'light' // Ensure alert is visible
-      }
-    );
+    setShowModal(true);
   };
 
   const toggleDetails = () => {
     setShowDetails(!showDetails);
   };
 
-  return (
-    <TouchableOpacity 
-      style={[styles.container, isSignedUp && styles.signedUpContainer]} 
-      onPress={handleLearnMore}
-      activeOpacity={0.7}
+  const renderDetailsModal = () => (
+    <Modal
+      visible={showModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowModal(false)}
     >
-      <View style={styles.content}>
-        <View style={styles.headerRow}>
-          {opportunity.interest_area && (
-            <View style={[styles.categoryContainer, isSignedUp && styles.signedUpCategory]}>
-              <Text style={styles.category}>{opportunity.interest_area}</Text>
-            </View>
-          )}
-          {isSignedUp && (
-            <View style={styles.signedUpBadge}>
-              <CheckCircle size={16} color={Colors.success} />
-              <Text style={styles.signedUpText}>Signed Up</Text>
-            </View>
-          )}
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Opportunity Details</Text>
+          <TouchableOpacity 
+            style={styles.modalCloseButton} 
+            onPress={() => setShowModal(false)}
+          >
+            <X size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
         </View>
         
-        <Text style={styles.title}>{opportunity.title}</Text>
-        
-        <View style={styles.detailsContainer}>
-          {opportunity.date && (
-            <View style={styles.detailItem}>
-              <Calendar size={16} color={Colors.primary} style={styles.detailIcon} />
-              <Text style={styles.detailText}>{formatDate(opportunity.date)}</Text>
-            </View>
-          )}
-          
-          {opportunity.date && (
-            <View style={styles.detailItem}>
-              <Clock size={16} color={Colors.primary} style={styles.detailIcon} />
-              <Text style={styles.detailText}>{formatTime(opportunity.date)}</Text>
-            </View>
-          )}
-          
-          {opportunity.location && (
-            <View style={styles.detailItem}>
-              <MapPin size={16} color={Colors.primary} style={styles.detailIcon} />
-              <Text style={styles.detailText}>{opportunity.location}</Text>
-            </View>
-          )}
-        </View>
-        
-        {opportunity.description && (
-          <View style={styles.description}>
-            <Text style={styles.descriptionText} numberOfLines={showDetails ? undefined : 3}>
-              {opportunity.description}
-            </Text>
-            {opportunity.description.length > 150 && (
-              <TouchableOpacity 
-                style={styles.expandButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  toggleDetails();
-                }}
-              >
-                <Text style={styles.expandText}>
-                  {showDetails ? 'Show Less' : 'Show More'}
-                </Text>
-              </TouchableOpacity>
+        <View style={styles.modalContent}>
+          <View style={styles.modalSection}>
+            <Text style={styles.modalOpportunityTitle}>{opportunity.title}</Text>
+            
+            {opportunity.interest_area && (
+              <View style={styles.modalCategoryContainer}>
+                <Text style={styles.modalCategory}>{opportunity.interest_area}</Text>
+              </View>
             )}
           </View>
-        )}
-        
-        <View style={styles.footer}>
+
+          <View style={styles.modalDetailsGrid}>
+            <View style={styles.modalDetailItem}>
+              <Calendar size={20} color={Colors.primary} />
+              <Text style={styles.modalDetailText}>
+                {opportunity.date ? formatDate(opportunity.date) : 'Date TBD'}
+              </Text>
+            </View>
+            
+            <View style={styles.modalDetailItem}>
+              <Clock size={20} color={Colors.primary} />
+              <Text style={styles.modalDetailText}>
+                {opportunity.date ? formatTime(opportunity.date) : 'Time TBD'}
+              </Text>
+            </View>
+            
+            <View style={styles.modalDetailItem}>
+              <MapPin size={20} color={Colors.primary} />
+              <Text style={styles.modalDetailText}>
+                {opportunity.location || 'Location TBD'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.modalSection}>
+            <Text style={styles.modalSectionTitle}>📝 Description</Text>
+            <Text style={styles.modalDescription}>
+              {opportunity.description || 'Join us for this meaningful volunteer opportunity to make a positive impact in our community.'}
+            </Text>
+          </View>
+
+          <View style={styles.modalSection}>
+            <Text style={styles.modalSectionTitle}>💡 What to Expect</Text>
+            <Text style={styles.modalBulletPoint}>• Meaningful work that makes a difference</Text>
+            <Text style={styles.modalBulletPoint}>• Opportunity to meet like-minded volunteers</Text>
+            <Text style={styles.modalBulletPoint}>• Skills development and community impact</Text>
+            <Text style={styles.modalBulletPoint}>• Recognition for your volunteer hours</Text>
+          </View>
+
+          <View style={styles.modalSection}>
+            <Text style={styles.modalSectionTitle}>🤝 How to Get Involved</Text>
+            <Text style={styles.modalBulletPoint}>• Click "Sign Up" to register for this opportunity</Text>
+            <Text style={styles.modalBulletPoint}>• You'll receive confirmation and details via email</Text>
+            <Text style={styles.modalBulletPoint}>• Your volunteer hours will be tracked automatically</Text>
+          </View>
+        </View>
+
+        <View style={styles.modalFooter}>
+          <TouchableOpacity 
+            style={styles.modalCloseTextButton}
+            onPress={() => setShowModal(false)}
+          >
+            <Text style={styles.modalCloseTextButtonText}>Close</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity 
             style={[
-              styles.signUpButton, 
-              isSignedUp && styles.signedUpButton,
-              loading && styles.loadingButton
+              styles.modalSignUpButton,
+              isSignedUp && styles.modalSignedUpButton,
+              loading && styles.modalLoadingButton
             ]}
-            onPress={(e) => {
-              e.stopPropagation(); // Prevent card press
-              handleSignUp();
+            onPress={() => {
+              setShowModal(false);
+              setTimeout(() => handleSignUp(), 100); // Small delay to allow modal to close
             }}
             disabled={loading}
-            activeOpacity={0.8}
           >
             {loading ? (
-              <Text style={styles.signUpButtonText}>Signing Up...</Text>
+              <Text style={styles.modalSignUpButtonText}>Signing Up...</Text>
             ) : isSignedUp ? (
               <>
                 <CheckCircle size={16} color={Colors.white} style={styles.buttonIcon} />
-                <Text style={styles.signUpButtonText}>Signed Up</Text>
+                <Text style={styles.modalSignUpButtonText}>Already Signed Up</Text>
               </>
             ) : (
               <>
                 <Heart size={16} color={Colors.white} style={styles.buttonIcon} />
-                <Text style={styles.signUpButtonText}>Sign Up</Text>
+                <Text style={styles.modalSignUpButtonText}>Sign Up Now</Text>
               </>
             )}
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.learnMoreButton}
-            onPress={(e) => {
-              e.stopPropagation(); // Prevent card press
-              console.log('Learn More button clicked directly');
-              handleLearnMore();
-            }}
-            activeOpacity={0.8}
-          >
-            <Info size={16} color={Colors.primary} style={styles.buttonIcon} />
-            <Text style={styles.learnMoreButtonText}>Learn More</Text>
-          </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </Modal>
+  );
+
+  return (
+    <>
+      <TouchableOpacity 
+        style={[styles.container, isSignedUp && styles.signedUpContainer]} 
+        onPress={handleLearnMore}
+        activeOpacity={0.7}
+      >
+        <View style={styles.content}>
+          <View style={styles.headerRow}>
+            {opportunity.interest_area && (
+              <View style={[styles.categoryContainer, isSignedUp && styles.signedUpCategory]}>
+                <Text style={styles.category}>{opportunity.interest_area}</Text>
+              </View>
+            )}
+            {isSignedUp && (
+              <View style={styles.signedUpBadge}>
+                <CheckCircle size={16} color={Colors.success} />
+                <Text style={styles.signedUpText}>Signed Up</Text>
+              </View>
+            )}
+          </View>
+          
+          <Text style={styles.title}>{opportunity.title}</Text>
+          
+          <View style={styles.detailsContainer}>
+            {opportunity.date && (
+              <View style={styles.detailItem}>
+                <Calendar size={16} color={Colors.primary} style={styles.detailIcon} />
+                <Text style={styles.detailText}>{formatDate(opportunity.date)}</Text>
+              </View>
+            )}
+            
+            {opportunity.date && (
+              <View style={styles.detailItem}>
+                <Clock size={16} color={Colors.primary} style={styles.detailIcon} />
+                <Text style={styles.detailText}>{formatTime(opportunity.date)}</Text>
+              </View>
+            )}
+            
+            {opportunity.location && (
+              <View style={styles.detailItem}>
+                <MapPin size={16} color={Colors.primary} style={styles.detailIcon} />
+                <Text style={styles.detailText}>{opportunity.location}</Text>
+              </View>
+            )}
+          </View>
+          
+          {opportunity.description && (
+            <View style={styles.description}>
+              <Text style={styles.descriptionText} numberOfLines={showDetails ? undefined : 3}>
+                {opportunity.description}
+              </Text>
+              {opportunity.description.length > 150 && (
+                <TouchableOpacity 
+                  style={styles.expandButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    toggleDetails();
+                  }}
+                >
+                  <Text style={styles.expandText}>
+                    {showDetails ? 'Show Less' : 'Show More'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          
+          <View style={styles.footer}>
+            <TouchableOpacity 
+              style={[
+                styles.signUpButton, 
+                isSignedUp && styles.signedUpButton,
+                loading && styles.loadingButton
+              ]}
+              onPress={(e) => {
+                e.stopPropagation(); // Prevent card press
+                handleSignUp();
+              }}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <Text style={styles.signUpButtonText}>Signing Up...</Text>
+              ) : isSignedUp ? (
+                <>
+                  <CheckCircle size={16} color={Colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.signUpButtonText}>Signed Up</Text>
+                </>
+              ) : (
+                <>
+                  <Heart size={16} color={Colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.signUpButtonText}>Sign Up</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.learnMoreButton}
+              onPress={(e) => {
+                e.stopPropagation(); // Prevent card press
+                console.log('Learn More button clicked directly');
+                handleLearnMore();
+              }}
+              activeOpacity={0.8}
+            >
+              <Info size={16} color={Colors.primary} style={styles.buttonIcon} />
+              <Text style={styles.learnMoreButtonText}>Learn More</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {renderDetailsModal()}
+    </>
   );
 }
 
@@ -438,5 +516,143 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     fontSize: 14,
     color: Colors.primary,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 20,
+    color: Colors.textPrimary,
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  modalSection: {
+    marginBottom: 24,
+  },
+  modalOpportunityTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    color: Colors.textPrimary,
+    marginBottom: 12,
+    lineHeight: 32,
+  },
+  modalCategoryContainer: {
+    backgroundColor: Colors.primaryLight,
+    alignSelf: 'flex-start',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  modalCategory: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: Colors.white,
+  },
+  modalDetailsGrid: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  modalDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalDetailText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textPrimary,
+    marginLeft: 12,
+  },
+  modalSectionTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    color: Colors.textPrimary,
+    marginBottom: 12,
+  },
+  modalDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: Colors.textPrimary,
+    lineHeight: 24,
+  },
+  modalBulletPoint: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: Colors.textPrimary,
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: 32,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: 12,
+  },
+  modalCloseTextButton: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseTextButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  modalSignUpButton: {
+    backgroundColor: Colors.secondary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  modalSignedUpButton: {
+    backgroundColor: Colors.success,
+  },
+  modalLoadingButton: {
+    backgroundColor: Colors.muted,
+  },
+  modalSignUpButtonText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: Colors.white,
   },
 });
