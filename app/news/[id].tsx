@@ -48,16 +48,22 @@ export default function NewsDetailScreen() {
     if (!newsItem) return;
     
     const shareUrl = getShareUrl('news', newsItem.id);
-    const success = await shareContent({
+    const result = await shareContent({
       title: newsItem.title,
       text: newsItem.excerpt,
       url: shareUrl,
     });
 
-    if (success) {
-      setToastMessage('Article shared successfully!');
-    } else {
-      setToastMessage('Link copied to clipboard!');
+    switch (result) {
+      case 'shared':
+        setToastMessage('Article shared successfully!');
+        break;
+      case 'copied':
+        setToastMessage('Link copied to clipboard!');
+        break;
+      case 'failed':
+        setToastMessage('Unable to share article');
+        break;
     }
     setShowToast(true);
   };

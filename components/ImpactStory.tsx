@@ -28,16 +28,22 @@ export default function ImpactStory({ story }: ImpactStoryProps) {
     e.stopPropagation(); // Prevent navigation when share button is pressed
     
     const shareUrl = getShareUrl('story', story.id);
-    const success = await shareContent({
+    const result = await shareContent({
       title: story.title,
       text: story.excerpt,
       url: shareUrl,
     });
 
-    if (success) {
-      setToastMessage('Story shared successfully!');
-    } else {
-      setToastMessage('Link copied to clipboard!');
+    switch (result) {
+      case 'shared':
+        setToastMessage('Story shared successfully!');
+        break;
+      case 'copied':
+        setToastMessage('Link copied to clipboard!');
+        break;
+      case 'failed':
+        setToastMessage('Unable to share story');
+        break;
     }
     setShowToast(true);
   };
