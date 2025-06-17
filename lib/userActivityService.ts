@@ -9,7 +9,7 @@ export interface VolunteerSession {
   hours_worked: number;
   session_date: string;
   location?: string;
-  status: 'completed' | 'cancelled';
+  status: 'registered' | 'completed' | 'cancelled';
   created_at: string;
   updated_at: string;
 }
